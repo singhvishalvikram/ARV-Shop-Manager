@@ -1,0 +1,11 @@
+{
+  "name": "ARV ENTERPRISES",
+  "short_name": "ARV",
+  "description": "Product Catalog",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": []
+}

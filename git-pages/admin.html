@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0ea5e9">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Admin - Cinema123BW</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc; color: #1e293b; line-height: 1.5;
+    }
+    .header {
+      background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header span { font-size: 12px; color: #64748b; }
+    .catalog-link { font-size: 13px; color: #0ea5e9; text-decoration: none; }
+    .container { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 16px; text-align: center;
+    }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1e293b; }
+    .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 24px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .upload-zone {
+      border: 2px dashed #e2e8f0; border-radius: 12px; padding: 32px;
+      text-align: center; cursor: pointer; transition: border-color 0.15s;
+    }
+    .upload-zone:hover { border-color: #0ea5e9; }
+    .upload-zone input { display: none; }
+    .upload-zone p { font-size: 14px; color: #64748b; margin-top: 8px; }
+    .upload-zone .filename { color: #1e293b; font-weight: 500; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 20px; border-radius: 8px; font-size: 14px;
+      font-weight: 600; border: none; cursor: pointer; transition: all 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0ea5e9; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #0284c7; }
+    .btn-secondary { background: #f1f5f9; color: #475569; }
+    .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+    .btn-group { display: flex; gap: 12px; margin-top: 16px; }
+    .alert {
+      padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px;
+    }
+    .alert-success { background: #dcfce7; color: #166534; }
+    .alert-error { background: #fef2f2; color: #991b1b; }
+    .alert-info { background: #fef3c7; color: #92400e; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <span>Catalog Management</span>
+    </div>
+    <a href="./" class="catalog-link">View Catalog</a>
+  </header>
+
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="statProducts">-</div>
+        <div class="stat-label">Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statCategories">-</div>
+        <div class="stat-label">Categories</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statVersion" style="font-size:14px">-</div>
+        <div class="stat-label">Version</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Upload Database</h2>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="dbFile" accept=".db">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin:0 auto 8px">
+          <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="filename" id="fileName">Click to upload your shop database (.db)</p>
+        <p style="font-size:12px;color:#94a3b8;margin-top:4px">SQLite database from Shop Manager</p>
+      </div>
+      <div id="validationResult"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="validateBtn" disabled>Validate</button>
+        <button class="btn btn-primary" id="publishBtn" disabled>Publish Catalog</button>
+      </div>
+      <div id="publishResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>Security Notice</h2>
+      <div class="alert alert-info">
+        Only safe customer fields are exposed: <strong>id, name, type, description, price, mrp, image_url</strong>.
+        Hidden fields (purchase_cost, location, quantity, created_at, updated_at) are <strong>never exposed</strong> to customers.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    const fileInput = document.getElementById('dbFile');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileName = document.getElementById('fileName');
+    const validateBtn = document.getElementById('validateBtn');
+    const publishBtn = document.getElementById('publishBtn');
+    const validationResult = document.getElementById('validationResult');
+    const publishResult = document.getElementById('publishResult');
+
+    // Load current stats
+    fetch('/api/catalog').then(r => r.json()).then(data => {
+      document.getElementById('statProducts').textContent = data.products?.length || 0;
+      document.getElementById('statCategories').textContent = data.categories?.length || 0;
+      document.getElementById('statVersion').textContent = data.version?.version || 'N/A';
+    }).catch(() => {});
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        fileName.textContent = selectedFile.name;
+        validateBtn.disabled = false;
+        publishBtn.disabled = false;
+        validationResult.innerHTML = '';
+        publishResult.innerHTML = '';
+      }
+    });
+
+    validateBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      validateBtn.disabled = true;
+      validationResult.innerHTML = '<div class="alert alert-info">Validating...</div>';
+      
+      const formData = new FormData();
+      formData.append('dbfile', selectedFile);
+      
+      try {
+        const res = await fetch('/api/admin/validate', { method: 'POST', body: formData });
+        const data = await res.json();
+        validationResult.innerHTML = `<div class="alert ${data.valid ? 'alert-success' : 'alert-error'}">${data.valid ? '✓' : '✗'} ${data.message}</div>`;
+      } catch (e) {
+        validationResult.innerHTML = '<div class="alert alert-error">Validation failed</div>';
+      } finally {
+        validateBtn.disabled = false;
+      }
+    });
+
+    publishBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      publishBtn.disabled = true;
+      publishResult.innerHTML = '<div class="alert alert-info">Publishing...</div>';
+      
+      const formData = new FormData();
+      formData.append('dbfile', selectedFile);
+      
+      try {
+        const res = await fetch('/api/admin/publish', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          publishResult.innerHTML = `<div class="alert alert-success">Published! ${data.products} products, ${data.categories} categories.</div>`;
+          document.getElementById('statProducts').textContent = data.products;
+          document.getElementById('statCategories').textContent = data.categories;
+          document.getElementById('statVersion').textContent = data.version;
+        } else {
+          publishResult.innerHTML = `<div class="alert alert-error">Error: ${data.error}</div>`;
+        }
+      } catch (e) {
+        publishResult.innerHTML = '<div class="alert alert-error">Publish failed</div>';
+      } finally {
+        publishBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

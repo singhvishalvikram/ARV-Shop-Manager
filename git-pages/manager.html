@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Customer View Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+    .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px 24px; border-bottom: 2px solid #6366f1; }
+    .header h1 { font-size: 1.3em; color: #6366f1; margin-bottom: 4px; }
+    .header p { font-size: 0.8em; color: #8080a0; }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .card { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #2a2a4a; }
+    .card h2 { color: #6366f1; margin-bottom: 14px; font-size: 1em; display: flex; align-items: center; gap: 8px; }
+    .card h2 .icon { font-size: 1.2em; }
+    label { display: block; margin: 10px 0 4px; color: #a0a0c0; font-size: 0.85em; font-weight: 500; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; padding: 10px 14px; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 8px;
+      color: #e0e0e0; font-size: 0.9em; transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #6366f1; }
+    textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row > div { display: flex; flex-direction: column; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0; }
+    .chk { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85em; color: #a0a0c0; }
+    .chk input { width: 16px; height: 16px; accent-color: #6366f1; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1a1a2e; gap: 12px; }
+    .toggle-row label { margin: 0; flex: 1; }
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #2a2a4a; border-radius: 24px; transition: 0.2s; }
+    .slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    .toggle input:checked + .slider { background: #6366f1; }
+    .toggle input:checked + .slider:before { transform: translateX(20px); }
+    .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-secondary { background: #2a2a4a; color: #a0a0c0; }
+    .btn-secondary:hover { background: #3a3a5a; color: #e0e0e0; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .product-search { margin-bottom: 12px; }
+    .product-search input { padding: 10px 14px; }
+    .product-list { max-height: 350px; overflow-y: auto; border: 1px solid #2a2a4a; border-radius: 8px; }
+    .product-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #1a1a2e; transition: background 0.15s; }
+    .product-item:hover { background: #16213e; }
+    .product-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: #ef4444; }
+    .product-item.hidden-prod .name { text-decoration: line-through; opacity: 0.5; }
+    .product-item .name { flex: 1; font-size: 0.85em; }
+    .product-item .cat { font-size: 0.7em; color: #8080a0; background: #16213e; padding: 2px 8px; border-radius: 4px; }
+    .product-item .price { font-size: 0.78em; color: #6366f1; font-weight: 600; }
+    .product-count { font-size: 0.8em; color: #8080a0; margin-top: 8px; }
+    .status-bar { padding: 12px 16px; border-radius: 8px; margin-top: 16px; font-size: 0.85em; display: none; }
+    .status-bar.show { display: block; }
+    .status-bar.success { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .status-bar.error { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .hint { font-size: 0.72em; color: #555; margin-top: 4px; }
+    .cat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .cat-chip { padding: 5px 12px; background: #16213e; border: 1px solid #2a2a4a; border-radius: 16px; font-size: 0.78em; cursor: pointer; transition: all 0.15s; }
+    .cat-chip.selected { background: #6366f1; border-color: #6366f1; color: white; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Customer View Manager</h1>
+    <p>Control what customers see in the public catalog</p>
+  </div>
+
+  <div class="container">
+    <!-- App Settings -->
+    <div class="card">
+      <h2><span class="icon">🎨</span> App Settings</h2>
+      <div class="row">
+        <div>
+          <label>App Title</label>
+          <input type="text" id="app_title" placeholder="My Shop">
+        </div>
+        <div>
+          <label>Subtitle</label>
+          <input type="text" id="app_subtitle" placeholder="Product Catalog">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>WhatsApp Number</label>
+          <input type="text" id="whatsapp_number" placeholder="919876543210">
+          <p class="hint">Include country code, no +</p>
+        </div>
+        <div>
+          <label>Theme Color</label>
+          <input type="text" id="theme_color" placeholder="#6366f1">
+        </div>
+      </div>
+      <label>Shop Location Address</label>
+      <textarea id="shop_location" rows="2" placeholder="e.g. Shop 123, Main Market, Delhi, India"></textarea>
+      <label>Footer Text</label>
+      <input type="text" id="footer_text" placeholder="© 2026 My Shop">
+    </div>
+
+    <!-- Visibility -->
+    <div class="card">
+      <h2><span class="icon">👁</span> Display Options</h2>
+      <div class="toggle-row"><label>Search Box</label><label class="toggle"><input type="checkbox" id="show_search" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>Category Filter</label><label class="toggle"><input type="checkbox" id="show_category_filter" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>Discount Badges</label><label class="toggle"><input type="checkbox" id="show_discount_badges" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>MRP (Strikethrough)</label><label class="toggle"><input type="checkbox" id="show_mrp" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>Descriptions</label><label class="toggle"><input type="checkbox" id="show_description" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>Product Images</label><label class="toggle"><input type="checkbox" id="show_images" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><label>Shop Location Banner</label><label class="toggle"><input type="checkbox" id="show_location" checked><span class="slider"></span></label></div>
+      <div class="row" style="margin-top:14px;">
+        <div>
+          <label>Products per Row</label>
+          <select id="products_per_row">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div>
+          <label>Max Products (0=all)</label>
+          <input type="number" id="max_products" value="0" min="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="card">
+      <h2><span class="icon">📂</span> Categories</h2>
+      <p style="font-size:0.78em;color:#555;margin-bottom:10px;">Click to toggle which categories appear in the catalog</p>
+      <div class="cat-chips" id="categoryChips">
+        <div class="cat-chip selected" data-cat="">All</div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div class="card">
+      <h2><span class="icon">📦</span> Products <span id="prodCount" style="font-weight:normal;color:#8080a0;font-size:0.85em;"></span></h2>
+      <div class="product-search">
+        <input type="text" id="prodSearch" placeholder="Search products...">
+      </div>
+      <div class="product-list" id="productList"><p style="padding:16px;color:#8080a0;text-align:center;">Loading products...</p></div>
+      <p class="hint" style="margin-top:8px;">✅ Checked = visible to customers | ☐ Checked = hidden</p>
+    </div>
+
+    <!-- Publish -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="saveConfig()">Save Settings</button>
+      <button class="btn btn-success" onclick="publishAll()">Save & Publish to GitHub</button>
+      <button class="btn btn-secondary" onclick="loadFromShop()">Re-sync from Shop DB</button>
+    </div>
+    <div id="statusBar" class="status-bar"></div>
+  </div>
+
+  <script>
+    let allProducts = [];
+    let hiddenProducts = new Set();
+
+    async function init() {
+      await loadProducts();
+      await loadConfig();
+      renderProducts();  // Re-render with hidden products applied
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/view-config');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const config = await res.json();
+        if (config.app_title) document.getElementById('app_title').value = config.app_title;
+        if (config.app_subtitle) document.getElementById('app_subtitle').value = config.app_subtitle;
+        if (config.whatsapp_number) document.getElementById('whatsapp_number').value = config.whatsapp_number;
+        if (config.theme_color) document.getElementById('theme_color').value = config.theme_color;
+        if (config.shop_location) document.getElementById('shop_location').value = config.shop_location;
+        if (config.footer_text) document.getElementById('footer_text').value = config.footer_text;
+        document.getElementById('show_search').checked = config.show_search !== '0';
+        document.getElementById('show_category_filter').checked = config.show_category_filter !== '0';
+        document.getElementById('show_discount_badges').checked = config.show_discount_badges !== '0';
+        document.getElementById('show_mrp').checked = config.show_mrp !== '0';
+        document.getElementById('show_description').checked = config.show_description !== '0';
+        document.getElementById('show_images').checked = config.show_images !== '0';
+        document.getElementById('show_location').checked = config.show_location !== '0';
+        if (config.products_per_row) document.getElementById('products_per_row').value = config.products_per_row;
+        if (config.max_products) document.getElementById('max_products').value = config.max_products;
+
+        hiddenProducts = new Set(config.hidden_products || []);
+
+        // Populate category chips (allProducts should already be loaded)
+        if (!allProducts || allProducts.length === 0) return;
+        const cats = [...new Set(allProducts.map(p => p.type).filter(Boolean))].sort();
+        const container = document.getElementById('categoryChips');
+        let html = '<div class="cat-chip ' + (!config.categories || config.categories.length === 0 ? 'selected' : '') + '" data-cat="">All</div>';
+        cats.forEach(cat => {
+          const sel = config.categories && config.categories.includes(cat) ? 'selected' : '';
+          html += '<div class="cat-chip ' + sel + '" data-cat="' + escAttr(cat) + '">' + escHtml(cat) + '</div>';
+        });
+        container.innerHTML = html;
+      } catch (e) { console.error('Load config failed:', e); }
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/shop-products');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        allProducts = await res.json();
+        if (!Array.isArray(allProducts) || allProducts.length === 0) {
+          document.getElementById('productList').innerHTML = '<p style="padding:16px;color:#ef4444;">No products found in Shop DB</p>';
+          return;
+        }
+        renderProducts();
+      } catch (e) {
+        document.getElementById('productList').innerHTML = '<p style="padding:16px;color:#ef4444;">Failed to load products: ' + escHtml(e.message) + '</p>';
+      }
+    }
+
+    function renderProducts() {
+      const search = document.getElementById('prodSearch').value.toLowerCase();
+      let products = allProducts.filter(p =>
+        p.name.toLowerCase().includes(search) || (p.type || '').toLowerCase().includes(search)
+      );
+
+      const container = document.getElementById('productList');
+      container.innerHTML = products.map(p => {
+        const isHidden = hiddenProducts.has(p.id);
+        return '<div class="product-item' + (isHidden ? ' hidden-prod' : '') + '">' +
+          '<input type="checkbox" data-id="' + p.id + '"' + (isHidden ? '' : ' checked') + ' onchange="toggleProduct(' + p.id + ')">' +
+          '<span class="name">' + escHtml(p.name) + '</span>' +
+          '<span class="cat">' + escHtml(p.type || '') + '</span>' +
+          '<span class="price">₹' + p.price + '</span>' +
+        '</div>';
+      }).join('');
+
+      document.getElementById('prodCount').textContent = '(' + products.length + ' products)';
+    }
+
+    function toggleProduct(id) {
+      if (hiddenProducts.has(id)) hiddenProducts.delete(id);
+      else hiddenProducts.add(id);
+      renderProducts();
+    }
+
+    async function saveConfig() {
+      const config = {
+        app_title: document.getElementById('app_title').value,
+        app_subtitle: document.getElementById('app_subtitle').value,
+        whatsapp_number: document.getElementById('whatsapp_number').value,
+        theme_color: document.getElementById('theme_color').value,
+        shop_location: document.getElementById('shop_location').value,
+        footer_text: document.getElementById('footer_text').value,
+        show_search: document.getElementById('show_search').checked ? '1' : '0',
+        show_category_filter: document.getElementById('show_category_filter').checked ? '1' : '0',
+        show_discount_badges: document.getElementById('show_discount_badges').checked ? '1' : '0',
+        show_mrp: document.getElementById('show_mrp').checked ? '1' : '0',
+        show_description: document.getElementById('show_description').checked ? '1' : '0',
+        show_images: document.getElementById('show_images').checked ? '1' : '0',
+        show_location: document.getElementById('show_location').checked ? '1' : '0',
+        products_per_row: document.getElementById('products_per_row').value,
+        max_products: document.getElementById('max_products').value,
+        hidden_products: [...hiddenProducts],
+        categories: getSelectedCategories()
+      };
+
+      try {
+        const res = await fetch('/api/view-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        const result = await res.json();
+        showStatus('Settings saved!', true);
+      } catch (e) { showStatus('Failed to save: ' + e.message, false); }
+    }
+
+    async function publishAll() {
+      showStatus('Publishing...', true);
+      await saveConfig();
+      // The server-side /api/view-config POST already regenerates catalog
+      // Small delay to let it complete
+      setTimeout(() => showStatus('Published! Visit your catalog page to verify.', true), 1500);
+    }
+
+    async function loadFromShop() {
+      try {
+        const res = await fetch('/api/generate-catalog', { method: 'POST' });
+        showStatus('Re-synced from Shop Manager DB!', true);
+        await loadProducts();
+      } catch (e) {
+        // Fallback: just reload products
+        await loadProducts();
+        showStatus('Products reloaded!', true);
+      }
+    }
+
+    function getSelectedCategories() {
+      const cats = [];
+      document.querySelectorAll('#categoryChips .cat-chip.selected').forEach(chip => {
+        const cat = chip.dataset.cat;
+        if (cat) cats.push(cat);
+      });
+      return cats;
+    }
+
+    // Category chip toggle
+    document.getElementById('categoryChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.cat-chip');
+      if (!chip) return;
+      if (chip.dataset.cat === '') {
+        document.querySelectorAll('#categoryChips .cat-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      } else {
+        document.querySelector('#categoryChips .cat-chip[data-cat=""]').classList.remove('selected');
+        chip.classList.toggle('selected');
+        if (document.querySelectorAll('#categoryChips .cat-chip.selected').length === 0) {
+          document.querySelector('#categoryChips .cat-chip[data-cat=""]').classList.add('selected');
+        }
+      }
+    });
+
+    // Product search
+    document.getElementById('prodSearch').addEventListener('input', () => renderProducts());
+
+    function showStatus(msg, success) {
+      const bar = document.getElementById('statusBar');
+      bar.textContent = msg;
+      bar.className = 'status-bar show ' + (success ? 'success' : 'error');
+      setTimeout(() => bar.className = 'status-bar', 4000);
+    }
+
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    function escAttr(s) { return (s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+    init();
+  </script>
+</body>
+</html>

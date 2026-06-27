@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Customer View Manager</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+a { color: #58a6ff; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+h1 { color: #f0f6fc; margin-bottom: 8px; font-size: 24px; }
+h2 { color: #f0f6fc; margin-bottom: 16px; font-size: 18px; }
+h3 { color: #f0f6fc; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Header */
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #21262d; }
+.header-actions { display: flex; gap: 8px; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #238636; color: #fff; }
+.btn-primary:hover { background: #2ea043; }
+.btn-secondary { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+.btn-secondary:hover { background: #30363d; }
+.btn-danger { background: #da3633; color: #fff; }
+.btn-danger:hover { background: #f85149; }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.stat-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; }
+.stat-value { font-size: 28px; font-weight: 700; color: #f0f6fc; }
+.stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+/* Sections */
+.section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+
+/* Filters */
+.filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: align-items: center; }
+.search-box { flex: 1; min-width: 200px; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 13px; }
+.search-box:focus { outline: none; border-color: #58a6ff; }
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 4px 10px; border-radius: 12px; font-size: 12px; background: #21262d; border: 1px solid #30363d; cursor: pointer; }
+.chip.active { background: #388bfd22; border-color: #388bfd; color: #58a6ff; }
+.chip:hover { border-color: #58a6ff; }
+
+/* Product Table */
+.product-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.product-table th { text-align: left; padding: 10px 8px; border-bottom: 1px solid #21262d; color: #8b949e; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+.product-table td { padding: 10px 8px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+.product-table tr:hover { background: #1c2128; }
+.product-name { font-weight: 500; color: #f0f6fc; }
+.product-type { font-size: 11px; color: #8b949e; }
+.product-price { font-weight: 600; }
+.product-price .mrp { text-decoration: line-through; color: #8b949e; font-weight: 400; margin-left: 6px; font-size: 12px; }
+.discount { color: #3fb950; font-size: 12px; margin-left: 6px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #388bfd22; color: #58a6ff; }
+
+/* Toggle Switch */
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #30363d; border-radius: 20px; transition: 0.3s; }
+.toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background: #c9d1d9; border-radius: 50%; transition: 0.3s; }
+.toggle input:checked + .toggle-slider { background: #238636; }
+.toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* Settings Grid */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.setting-item { display: flex; flex-direction: column; gap: 6px; }
+.setting-item label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.3px; }
+.setting-item input { padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 13px; }
+.setting-item input:focus { outline: none; border-color: #58a6ff; }
+.setting-actions { margin-top: 20px; display: flex; gap: 8px; }
+
+/* Toast */
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1000; transform: translateX(120%); transition: transform 0.3s ease; }
+.toast.show { transform: translateX(0); }
+.toast.success { background: #238636; color: #fff; }
+.toast.error { background: #da3633; color: #fff; }
+.toast.info { background: #1f6feb; color: #fff; }
+
+/* Loading overlay */
+.loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 999; }
+.loading.active { display: flex; }
+.spinner { width: 40px; height: 40px; border: 3px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Search & Tabs */
+.search-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.search-row input { flex: 1; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .product-table { font-size: 12px; }
+}
+
+/* Sort column */
+.sort-btn { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 12px; }
+.sort-btn:hover { color: #58a6ff; }
+
+/* Hidden products */
+.product-table tr.hidden { opacity: 0.5; }
+.product-table tr.hidden:hover { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Customer View Manager</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="syncData()">Sync Products</button>
+      <button class="btn btn-secondary" onclick="publishSite()">Publish</button>
+    </div>
+  </div>
+
+  <!-- Dashboard Stats -->
+  <div id="dashboard">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-label">Total Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-visible">-</div>
+        <div class="stat-label">Visible</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-hidden">-</div>
+        <div class="stat-label">Hidden</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-categories">-</div>
+        <div class="stat-label">Categories</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-sync" style="font-size:14px;">-</div>
+        <div class="stat-label">Last Sync</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-publish" style="font-size:14px;">-</div>
+        <div class="stat-label">Last Publish</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Section -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Products</h2>
+    </div>
+    <div class="filters">
+      <input type="text" class="search-box" id="search-input" placeholder="Search products..." oninput="filterProducts()">
+      <div class="filter-chips" id="category-chips"></div>
+    </div>
+    <div id="products-loading" class="loading active"><div class="spinner"></div></div>
+    <div id="products-container" style="display:none;">
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Price</th>
+            <th>Visible</th>
+            <th>Featured</th>
+            <th>Badge</th>
+            <th>Sort</th>
+          </tr>
+        </thead>
+        <tbody id="products-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings Section -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Settings</h2>
+    </div>
+    <div class="settings-grid" id="settings-grid"></div>
+    <div class="setting-actions">
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+
+  <!-- Categories Section -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Categories</h2>
+    </div>
+    <table class="product-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Display Name</th>
+          <th>Visible</th>
+          <th>Sort Order</th>
+        </tr>
+      </thead>
+      <tbody id="categories-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let allProducts = [];
+let allCategories = [];
+let settings = {};
+let activeCategoryFilter = 'all';
+
+// Toast notifications
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type + ' show';
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Load dashboard stats
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    document.getElementById('stat-total').textContent = data.totalProducts;
+    document.getElementById('stat-visible').textContent = data.visibleProducts;
+    document.getElementById('stat-hidden').textContent = data.hiddenProducts;
+    document.getElementById('stat-categories').textContent = data.categories;
+    document.getElementById('stat-sync').textContent = data.lastSync ? formatDate(data.lastSync) : 'Never';
+    document.getElementById('stat-publish').textContent = data.lastPublish ? formatDate(data.lastPublish) : 'Never';
+  } catch (e) { console.error('Dashboard error:', e); }
+}
+
+// Load products
+async function loadProducts() {
+  document.getElementById('products-loading').classList.add('active');
+  try {
+    const res = await fetch('/api/products');
+    allProducts = await res.json();
+    renderProducts();
+    renderCategoryChips();
+  } catch (e) { showToast('Failed to load products', 'error'); }
+  document.getElementById('products-loading').classList.remove('active');
+  document.getElementById('products-container').style.display = 'block';
+}
+
+// Render products table
+function renderProducts() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  let filtered = allProducts;
+  if (activeCategoryFilter !== 'all') {
+    filtered = filtered.filter(p => p.type === activeCategoryFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.badge && p.badge.toLowerCase().includes(search)));
+  }
+  const tbody = document.getElementById('products-tbody');
+  tbody.innerHTML = filtered.map(p => `
+    <tr class="${p.visible ? '' : 'hidden'}" data-id="${p.id}">
+      <td>
+        <div class="product-name">${escapeHtml(p.name)}</div>
+      </td>
+      <td><div class="product-type">${escapeHtml(p.type)}</div></td>
+      <td>
+        <span class="product-price">&#8377;${Number(p.price).toFixed(0)}</span>
+        ${p.mrp > p.price ? `<span class="mrp">&#8377;${Number(p.mrp).toFixed(0)}</span><span class="discount">(${p.discount_percent}% off)</span>` : ''}
+      </td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${p.visible ? 'checked' : ''} onchange="toggleField(${p.id}, 'visible', this.checked ? 1 : 0)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${p.featured ? 'checked' : ''} onchange="toggleField(${p.id}, 'featured', this.checked ? 1 : 0)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td><input type="text" value="${escapeHtml(p.badge || '')}" onchange="updateField(${p.id}, 'badge', this.value)" style="width:80px;padding:4px 6px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:12px;"></td>
+      <td><input type="number" value="${p.sort_order || 0}" onchange="updateField(${p.id}, 'sort_order', parseInt(this.value)||0)" style="width:50px;padding:4px 6px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:12px;"></td>
+    </tr>
+  `).join('');
+}
+
+// Filter products
+function filterProducts() { renderProducts(); }
+
+// Render category chips
+function renderCategoryChips() {
+  const types = [...new Set(allProducts.map(p => p.type))].sort();
+  const container = document.getElementById('category-chips');
+  let html = `<div class="chip ${activeCategoryFilter === 'all' ? 'active' : ''}" onclick="setCategoryFilter('all')">All</div>`;
+  html += types.map(t => `<div class="chip ${activeCategoryFilter === t ? 'active' : ''}" onclick="setCategoryFilter('${escapeHtml(t)}')">${escapeHtml(t)}</div>`).join('');
+  container.innerHTML = html;
+}
+
+// Set category filter
+function setCategoryFilter(cat) {
+  activeCategoryFilter = cat;
+  renderCategoryChips();
+  renderProducts();
+}
+
+// Toggle product field
+async function toggleField(id, field, value) {
+  try {
+    const res = await fetch(`/api/products/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const p = allProducts.find(p => p.id === id);
+      if (p) p[field] = value;
+      showToast(`Updated ${field}`);
+    } else {
+      showToast('Update failed', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Update field (for text/number inputs)
+async function updateField(id, field, value) {
+  try {
+    const res = await fetch(`/api/products/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const p = allProducts.find(p => p.id === id);
+      if (p) p[field] = value;
+      showToast(`Updated ${field}`);
+    } else {
+      showToast('Update failed', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Load settings
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    settings = await res.json();
+    renderSettings();
+  } catch (e) { showToast('Failed to load settings', 'error'); }
+}
+
+// Render settings
+function renderSettings() {
+  const fields = [
+    { key: 'app_title', label: 'App Title' },
+    { key: 'app_subtitle', label: 'App Subtitle' },
+    { key: 'whatsapp_number', label: 'WhatsApp Number' },
+    { key: 'shop_location', label: 'Shop Location' },
+    { key: 'theme_color', label: 'Theme Color' },
+    { key: 'products_per_row', label: 'Products Per Row' }
+  ];
+  const grid = document.getElementById('settings-grid');
+  grid.innerHTML = fields.map(f => `
+    <div class="setting-item">
+      <label>${f.label}</label>
+      <input type="${f.key === 'products_per_row' ? 'number' : 'text'}" 
+             id="setting-${f.key}" 
+             value="${escapeHtml(settings[f.key] || '')}">
+    </div>
+  `).join('');
+}
+
+// Save settings
+async function saveSettings() {
+  const fields = ['app_title', 'app_subtitle', 'whatsapp_number', 'shop_location', 'theme_color', 'products_per_row'];
+  const data = {};
+  for (const f of fields) {
+    const el = document.getElementById('setting-' + f);
+    if (el) data[f] = el.value;
+  }
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (result.success) {
+      showToast('Settings saved');
+    } else {
+      showToast('Failed to save', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Load categories
+async function loadCategories() {
+  try {
+    const res = await fetch('/api/categories');
+    allCategories = await res.json();
+    renderCategories();
+  } catch (e) { showToast('Failed to load categories', 'error'); }
+}
+
+// Render categories
+function renderCategories() {
+  const tbody = document.getElementById('categories-tbody');
+  tbody.innerHTML = allCategories.map(c => `
+    <tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td><input type="text" value="${escapeHtml(c.display_name || '')}" onchange="updateCategory(${c.id}, 'display_name', this.value)" style="width:100%;padding:4px 6px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:12px;"></td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${c.visible ? 'checked' : ''} onchange="updateCategory(${c.id}, 'visible', this.checked ? 1 : 0)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td><input type="number" value="${c.sort_order || 0}" onchange="updateCategory(${c.id}, 'sort_order', parseInt(this.value)||0)" style="width:60px;padding:4px 6px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:12px;"></td>
+    </tr>
+  `).join('');
+}
+
+// Update category
+async function updateCategory(id, field, value) {
+  try {
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, [field]: value })
+    });
+    const data = await res.json();
+    if (data.success) showToast('Category updated');
+    else showToast('Update failed', 'error');
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Sync data
+async function syncData() {
+  showToast('Syncing...', 'info');
+  try {
+    const res = await fetch('/api/sync', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Sync completed');
+      await loadProducts();
+      await loadDashboard();
+    } else {
+      showToast('Sync failed: ' + (data.error || 'unknown'), 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Publish site
+async function publishSite() {
+  showToast('Publishing...', 'info');
+  try {
+    const res = await fetch('/api/publish', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Published successfully');
+      await loadDashboard();
+    } else {
+      showToast('Publish failed', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+// Utility functions
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatDate(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  } catch { return dateStr; }
+}
+
+// Initialize
+(async () => {
+  await loadDashboard();
+  await loadProducts();
+  await loadSettings();
+  await loadCategories();
+})();
+</script>
+</body>
+</html>

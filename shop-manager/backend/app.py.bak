@@ -1,0 +1,209 @@
+"""
+Shop Manager - Flask Backend
+SQLite + REST API + Web Frontend
+"""
+import os
+import sqlite3
+from datetime import datetime
+from flask import Flask, jsonify, request, render_template, send_from_directory
+
+app = Flask(__name__, static_folder='static', template_folder='templates')
+DB_PATH = os.path.join(os.path.dirname(__file__), 'shop.db')
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            price REAL NOT NULL DEFAULT 0.0,
+            image_url TEXT NOT NULL DEFAULT '',
+            location TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+# ── API Routes ────────────────────────────────────────────────────────
+
+@app.route('/api/items', methods=['GET'])
+def get_items():
+    """List items with optional search and pagination."""
+    search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    offset = (page - 1) * per_page
+
+    conn = get_db()
+
+    if search:
+        like = f'%{search}%'
+        count_row = conn.execute(
+            """SELECT COUNT(*) as total FROM items
+               WHERE name LIKE ? OR type LIKE ? OR description LIKE ?""",
+            (like, like, like)
+        ).fetchone()
+        total = count_row['total']
+        rows = conn.execute(
+            """SELECT * FROM items
+               WHERE name LIKE ? OR type LIKE ? OR description LIKE ?
+               ORDER BY updated_at DESC LIMIT ? OFFSET ?""",
+            (like, like, like, per_page, offset)
+        ).fetchall()
+    else:
+        count_row = conn.execute("SELECT COUNT(*) as total FROM items").fetchone()
+        total = count_row['total']
+        rows = conn.execute(
+            "SELECT * FROM items ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset)
+        ).fetchall()
+
+    conn.close()
+
+    items = [dict(r) for r in rows]
+    return jsonify({
+        'items': items,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': max(1, (total + per_page - 1) // per_page)
+    })
+
+
+@app.route('/api/items/<int:item_id>', methods=['GET'])
+def get_item(item_id):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({'error': 'Item not found'}), 404
+    return jsonify(dict(row))
+
+
+@app.route('/api/items', methods=['POST'])
+def create_item():
+    data = request.get_json()
+    if not data or not data.get('name', '').strip():
+        return jsonify({'error': 'Item name is required'}), 400
+
+    conn = get_db()
+    cursor = conn.execute(
+        """INSERT INTO items (name, type, description, price, image_url, location)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            data['name'].strip(),
+            data.get('type', '').strip(),
+            data.get('description', '').strip(),
+            float(data.get('price', 0)),
+            data.get('image_url', '').strip(),
+            data.get('location', '').strip(),
+        )
+    )
+    conn.commit()
+    item_id = cursor.lastrowid
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    conn.close()
+    return jsonify(dict(row)), 201
+
+
+@app.route('/api/items/<int:item_id>', methods=['PUT'])
+def update_item(item_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    conn = get_db()
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({'error': 'Item not found'}), 404
+
+    fields = {}
+    for key in ('name', 'type', 'description', 'price', 'image_url', 'location'):
+        if key in data:
+            fields[key] = data[key]
+
+    if not fields:
+        conn.close()
+        return jsonify({'error': 'No fields to update'}), 400
+
+    fields['updated_at'] = datetime.now().isoformat()
+    set_clause = ', '.join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [item_id]
+
+    conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)
+    conn.commit()
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    conn.close()
+    return jsonify(dict(row))
+
+
+@app.route('/api/items/<int:item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({'error': 'Item not found'}), 404
+    conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/dashboard', methods=['GET'])
+def dashboard():
+    conn = get_db()
+    total = conn.execute("SELECT COUNT(*) as c FROM items").fetchone()['c']
+
+    type_breakdown = [
+        dict(r) for r in conn.execute(
+            "SELECT type, COUNT(*) as count FROM items WHERE type != '' GROUP BY type ORDER BY count DESC"
+        ).fetchall()
+    ]
+
+    recent = [
+        dict(r) for r in conn.execute(
+            "SELECT * FROM items ORDER BY created_at DESC LIMIT 5"
+        ).fetchall()
+    ]
+
+    stats = {
+        'total_items': total,
+        'total_types': len(type_breakdown),
+        'type_breakdown': type_breakdown,
+        'recent_items': recent,
+        'avg_price': round(
+            conn.execute("SELECT COALESCE(AVG(price),0) as a FROM items").fetchone()['a'], 2
+        ),
+        'total_stock_value': round(
+            conn.execute("SELECT COALESCE(SUM(price),0) as s FROM items").fetchone()['s'], 2
+        ),
+    }
+    conn.close()
+    return jsonify(stats)
+
+
+# ── Frontend Routes ───────────────────────────────────────────────────
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+if __name__ == '__main__':
+    init_db()
+    app.run(host='0.0.0.0', port=8080, debug=True)

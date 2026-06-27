@@ -1,0 +1,529 @@
+// Global state
+let appState = {
+    items: [],
+    sales: [],
+    cameraStream: null,
+    capturedImageBase64: null,
+    isOnline: navigator.onLine,
+    currentTab: 'dashboard'
+};
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 App initializing...');
+    setupEventListeners();
+    setupOnlineOfflineListeners();
+    checkOnlineStatus();
+    
+    // Load initial data
+    console.log('📊 Loading dashboard...');
+    await loadDashboard();
+    console.log('📦 Loading items...');
+    await loadItems();
+    console.log('💰 Loading sales...');
+    await loadSales();
+    console.log('✅ App initialized!');
+});
+
+// Setup event listeners
+function setupEventListeners() {
+    // Search functionality
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+        filterItems(e.target.value);
+    });
+
+    // Camera controls
+    document.getElementById('startCameraBtn')?.addEventListener('click', startCamera);
+    document.getElementById('captureCameraBtn')?.addEventListener('click', captureImage);
+    document.getElementById('stopCameraBtn')?.addEventListener('click', stopCamera);
+    document.getElementById('retakeBtn')?.addEventListener('click', retakePhoto);
+    document.getElementById('useImageBtn')?.addEventListener('click', useImage);
+
+    // Form submission
+    document.getElementById('itemForm')?.addEventListener('submit', addItem);
+
+    // Modal close
+    document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+    document.getElementById('itemModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'itemModal') closeModal();
+    });
+
+    // Drawer overlay
+    document.getElementById('drawerOverlay')?.addEventListener('click', closeDrawer);
+
+    // Install PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+        document.getElementById('installBtn').addEventListener('click', installPWA);
+    });
+}
+
+function setupOnlineOfflineListeners() {
+    window.addEventListener('online', () => {
+        appState.isOnline = true;
+        checkOnlineStatus();
+        syncOfflineData();
+    });
+
+    window.addEventListener('offline', () => {
+        appState.isOnline = false;
+        checkOnlineStatus();
+    });
+}
+
+function checkOnlineStatus() {
+    const badge = document.getElementById('onlineStatus');
+    if (appState.isOnline) {
+        badge.textContent = '● Online';
+        badge.classList.remove('offline');
+    } else {
+        badge.textContent = '● Offline';
+        badge.classList.add('offline');
+    }
+}
+
+// Drawer Navigation
+function openDrawer() {
+    document.getElementById('navigationDrawer').classList.add('open');
+    document.getElementById('drawerOverlay').classList.add('open');
+}
+
+function closeDrawer() {
+    document.getElementById('navigationDrawer').classList.remove('open');
+    document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+function selectDrawerItem(tabName, event) {
+    event.preventDefault();
+    closeDrawer();
+    switchTab(tabName);
+}
+
+// Tab switching
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+    // Show selected tab
+    const tab = document.getElementById(tabName);
+    if (tab) {
+        tab.classList.add('active');
+    }
+
+    appState.currentTab = tabName;
+
+    // Load tab-specific data
+    if (tabName === 'items') loadItems();
+    if (tabName === 'sales') loadSales();
+    if (tabName === 'dashboard') loadDashboard();
+    if (tabName === 'camera') resetCameraForm();
+}
+
+// Dashboard
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard');
+        if (!res.ok) throw new Error('Dashboard fetch failed');
+        
+        const data = await res.json();
+        document.getElementById('totalItems').textContent = data.total_items || 0;
+        document.getElementById('totalStock').textContent = data.total_quantity || 0;
+        document.getElementById('stockValue').textContent = '₹' + formatNumber(data.total_stock_value || 0);
+        document.getElementById('todayRevenue').textContent = '₹' + formatNumber(data.today_revenue || 0);
+
+        // Low stock items
+        const lowStockList = document.getElementById('lowStockList');
+        const lowStock = (data.recent_items || []).filter(item => item.quantity <= 10);
+        lowStockList.innerHTML = lowStock.map(item => `
+            <li class="${item.quantity === 0 ? 'zero' : 'low'}">
+                <span>${item.name}</span>
+                <span class="qty">${item.quantity}</span>
+            </li>
+        `).join('');
+
+        saveToCache('dashboard', data);
+    } catch (error) {
+        console.error('Dashboard error:', error);
+        const cached = loadFromCache('dashboard');
+        if (cached) {
+            document.getElementById('totalItems').textContent = cached.total_items || 0;
+            document.getElementById('totalStock').textContent = cached.total_quantity || 0;
+            document.getElementById('stockValue').textContent = '₹' + formatNumber(cached.total_stock_value || 0);
+        }
+    }
+}
+
+// Items Management
+async function loadItems() {
+    try {
+        const res = await fetch('/api/items');
+        if (!res.ok) throw new Error('Items fetch failed');
+        
+        const data = await res.json();
+        appState.items = data.items || data;
+        console.log('📦 Loaded items:', appState.items);
+        renderItems(appState.items);
+        saveToCache('items', appState.items);
+        updateSalesDropdown();
+    } catch (error) {
+        console.error('❌ Items error:', error);
+        const cached = loadFromCache('items');
+        if (cached) {
+            appState.items = cached;
+            renderItems(appState.items);
+        }
+    }
+}
+
+function renderItems(items) {
+    const container = document.getElementById('itemsList');
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<div class="empty-state">No items yet. Add one from the Camera tab!</div>';
+        return;
+    }
+
+    container.innerHTML = items.map(item => `
+        <div class="item-card" onclick="openItemDetail(${item.id})">
+            <div class="item-image">
+                ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}" onerror="this.innerHTML='📦'">` : '<div style="font-size:40px;">📦</div>'}
+            </div>
+            <div class="item-info">
+                <div class="item-name">${item.name}</div>
+                <div class="item-price">₹${formatNumber(item.price)}</div>
+                <div class="qty-badge ${getQtyClass(item.quantity)}">
+                    ${item.quantity} in stock
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterItems(query) {
+    const filtered = appState.items.filter(item =>
+        item.name.toLowerCase().includes(query.toLowerCase()) ||
+        (item.type && item.type.toLowerCase().includes(query.toLowerCase()))
+    );
+    renderItems(filtered);
+}
+
+function getQtyClass(quantity) {
+    if (quantity === 0) return 'qty-zero';
+    if (quantity <= 10) return 'qty-low';
+    return 'qty-ok';
+}
+
+// Item details modal
+function openItemDetail(itemId) {
+    const item = appState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const details = document.getElementById('itemDetails');
+    details.innerHTML = `
+        <div style="text-align: center;">
+            ${item.image_url ? `<img src="${item.image_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 15px;" onerror="this.style.display='none'">` : ''}
+            <div style="font-size: 60px; margin-bottom: 15px;">📦</div>
+        </div>
+        <h2>${item.name}</h2>
+        <p><strong>Type:</strong> ${item.type || 'N/A'}</p>
+        <p><strong>Description:</strong> ${item.description || 'N/A'}</p>
+        <p><strong>Price:</strong> ₹${formatNumber(item.price)}</p>
+        <p><strong>Quantity:</strong> <span class="qty-badge ${getQtyClass(item.quantity)}">${item.quantity}</span></p>
+        <p><strong>Location:</strong> ${item.location || 'N/A'}</p>
+        <div style="margin-top: 20px;">
+            <button onclick="deleteItem(${item.id})" class="btn-danger">Delete Item</button>
+        </div>
+    `;
+
+    document.getElementById('itemModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('itemModal').style.display = 'none';
+}
+
+// Add Item
+async function addItem(e) {
+    e.preventDefault();
+
+    const formData = new FormData(document.getElementById('itemForm'));
+    const data = {
+        name: formData.get('name'),
+        type: formData.get('type'),
+        description: formData.get('description'),
+        price: parseFloat(formData.get('price')) || 0,
+        quantity: parseInt(formData.get('quantity')) || 0,
+        location: formData.get('location'),
+        image_base64: formData.get('image_base64') || null
+    };
+
+    try {
+        const res = await fetch('/api/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            alert('✓ Item added successfully!');
+            document.getElementById('itemForm').reset();
+            document.getElementById('imageBase64').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('cameraPreview').style.display = 'block';
+            document.getElementById('startCameraBtn').style.display = 'block';
+            appState.capturedImageBase64 = null;
+            
+            await loadItems();
+            await loadDashboard();
+            switchTab('items');
+        } else {
+            alert('Error adding item');
+        }
+    } catch (error) {
+        console.error('Add item error:', error);
+        if (!appState.isOnline) {
+            saveOfflineAction('addItem', data);
+            alert('Offline: Item will be added when online');
+        } else {
+            alert('Error: ' + error.message);
+        }
+    }
+}
+
+// Delete Item
+async function deleteItem(itemId) {
+    if (!confirm('Delete this item?')) return;
+
+    try {
+        const res = await fetch(`/api/items/${itemId}`, { method: 'DELETE' });
+        if (res.ok) {
+            alert('Item deleted');
+            closeModal();
+            await loadItems();
+            await loadDashboard();
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+    }
+}
+
+// Sales Management
+async function loadSales() {
+    try {
+        const res = await fetch('/api/sales');
+        if (!res.ok) throw new Error('Sales fetch failed');
+        
+        appState.sales = await res.json();
+        renderSales(appState.sales);
+        saveToCache('sales', appState.sales);
+    } catch (error) {
+        console.error('Sales error:', error);
+        const cached = loadFromCache('sales');
+        if (cached) renderSales(cached);
+    }
+}
+
+function renderSales(sales) {
+    const container = document.getElementById('salesList');
+    if (!container) return;
+
+    if (!sales || sales.length === 0) {
+        container.innerHTML = '<li class="empty">No sales recorded today</li>';
+        return;
+    }
+
+    container.innerHTML = sales.map(sale => `
+        <li class="sale-item">
+            <span>${sale.item_name || 'Unknown'}</span>
+            <span>x${sale.quantity} = ₹${formatNumber(sale.amount)}</span>
+        </li>
+    `).join('');
+}
+
+function updateSalesDropdown() {
+    const select = document.getElementById('saleItemSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Choose Item --</option>' +
+        appState.items.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+}
+
+async function recordSale() {
+    const itemId = document.getElementById('saleItemSelect').value;
+    const quantity = parseInt(document.getElementById('saleQuantity').value) || 1;
+
+    if (!itemId) {
+        alert('Please select an item');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_id: parseInt(itemId), quantity })
+        });
+
+        if (res.ok) {
+            alert('✓ Sale recorded!');
+            document.getElementById('saleQuantity').value = '1';
+            document.getElementById('saleItemSelect').value = '';
+            await loadSales();
+            await loadItems();
+            await loadDashboard();
+        } else {
+            const err = await res.json();
+            alert('Error: ' + (err.error || 'Failed to record sale'));
+        }
+    } catch (error) {
+        console.error('Sale error:', error);
+        alert('Error: ' + error.message);
+    }
+}
+
+// Camera Functions
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+
+        const video = document.getElementById('cameraPreview');
+        video.srcObject = stream;
+        appState.cameraStream = stream;
+
+        document.getElementById('startCameraBtn').style.display = 'none';
+        document.getElementById('captureCameraBtn').style.display = 'inline-block';
+        document.getElementById('stopCameraBtn').style.display = 'inline-block';
+    } catch (error) {
+        alert('Camera permission denied or not available');
+        console.error('Camera error:', error);
+    }
+}
+
+function captureImage() {
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    appState.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+    document.getElementById('capturedImage').src = appState.capturedImageBase64;
+    
+    document.getElementById('cameraPreview').style.display = 'none';
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('captureCameraBtn').style.display = 'none';
+    document.getElementById('stopCameraBtn').style.display = 'none';
+}
+
+function stopCamera() {
+    if (appState.cameraStream) {
+        appState.cameraStream.getTracks().forEach(track => track.stop());
+        appState.cameraStream = null;
+    }
+
+    document.getElementById('startCameraBtn').style.display = 'inline-block';
+    document.getElementById('captureCameraBtn').style.display = 'none';
+    document.getElementById('stopCameraBtn').style.display = 'none';
+}
+
+function retakePhoto() {
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('cameraPreview').style.display = 'block';
+    document.getElementById('captureCameraBtn').style.display = 'inline-block';
+    appState.capturedImageBase64 = null;
+}
+
+function useImage() {
+    if (appState.capturedImageBase64) {
+        document.getElementById('imageBase64').value = appState.capturedImageBase64;
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('cameraPreview').style.display = 'block';
+        document.getElementById('startCameraBtn').style.display = 'inline-block';
+        alert('✓ Image ready! Fill in the item details below and click "Add Item"');
+    }
+}
+
+function resetCameraForm() {
+    document.getElementById('itemForm').reset();
+    document.getElementById('imageBase64').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('cameraPreview').style.display = 'block';
+    appState.capturedImageBase64 = null;
+
+    if (appState.cameraStream) {
+        stopCamera();
+    }
+}
+
+// Cache & Offline Support
+function saveToCache(key, data) {
+    try {
+        localStorage.setItem(`cache_${key}`, JSON.stringify(data));
+    } catch (e) {
+        console.warn('LocalStorage full or unavailable');
+    }
+}
+
+function loadFromCache(key) {
+    try {
+        const data = localStorage.getItem(`cache_${key}`);
+        return data ? JSON.parse(data) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveOfflineAction(action, data) {
+    try {
+        const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
+        actions.push({ action, data, timestamp: Date.now() });
+        localStorage.setItem('offlineActions', JSON.stringify(actions));
+    } catch (e) {
+        console.warn('Could not save offline action');
+    }
+}
+
+async function syncOfflineData() {
+    try {
+        const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
+        for (const action of actions) {
+            if (action.action === 'addItem') {
+                await fetch('/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(action.data)
+                });
+            }
+        }
+        localStorage.removeItem('offlineActions');
+        await loadItems();
+        await loadDashboard();
+    } catch (error) {
+        console.error('Sync error:', error);
+    }
+}
+
+// PWA Installation
+async function installPWA() {
+    if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            alert('✓ App installed!');
+        }
+        window.deferredPrompt = null;
+        document.getElementById('installBtn').style.display = 'none';
+    }
+}
+
+// Utilities
+function formatNumber(num) {
+    return num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
