@@ -39,9 +39,21 @@ plus a WhatsApp-checkout product catalog for customers. Tenancy unit = **the sho
 See `agent.md` (codebase guide) and `APP-AUDIT-AND-SELL-STRATEGY.md` (strategy) for context,
 but treat the audit's claims as **unverified** — verify against code before relying on them.
 
+**Architecture (consolidating):** the owner manager (legacy Flask) and the customer view
+(legacy Node) are being merged into **one FastAPI service + one SQLite DB**
+(`shop-manager/backend/app/`, served under `/api/v1`). The legacy
+`import.py`/`customer-view.db`/`generate.py` copy pipeline is being retired. One backend,
+**two front-end faces** (owner admin vs. public catalog) kept separate because the catalog
+must never see `purchase_cost`/`location`/`quantity`.
+
 ## 2. Verified current state (read the CODE, not the audit)
 
-The audit oversells readiness. Confirmed from source this session:
+> **Resolved in the new FastAPI service** (`shop-manager/backend/app/`): server-side auth on
+> every owner route, argon2id password hashing, parameterized SQLite (no subprocess), env
+> config. The table below describes the **legacy** Flask `app.py` and Node `server.js`, which
+> still exist with these flaws and are pending removal — do not copy their patterns.
+
+The audit oversells readiness. Confirmed from source (legacy code):
 
 | Reality | Evidence |
 |---|---|
@@ -52,16 +64,26 @@ The audit oversells readiness. Confirmed from source this session:
 | Latent bug: `json.load` used but `json` never imported (hidden by bare `except`) | `app.py:36` |
 | `.bak` / `.backup` files committed; no tests; no CI | repo tree |
 
-## 3. Data model (verified)
+## 3. Data model (single DB — `shop-manager/backend/shop.db`, SQLite WAL)
 
-- **`shop.db`** (source of truth): `items` (id, name, type, description, price, mrp,
-  purchase_cost, image_url, location, quantity, created_at, updated_at) and
-  `daily_sales` (id, item_id→items.id, quantity_sold, sale_price, sale_date, description).
-  `stock_status` is **computed**, not stored (`quantity <= 0 → out_of_stock`).
-- **`customer-view.db`** (derived via `import.py`): `products` (mirrors items + merch
-  fields: visible, featured, badge, sort_order, *_override, discount_percent, stock_status),
-  `categories`, `settings` (key/value), `sync_log`, `users`, `user_cart`, `sessions`.
-- The "CEA / `cea.db`" in the audit is **not present** in this repo — stale; ignore.
+Schema lives in `shop-manager/backend/app/db.py` (`init_schema`). The former
+`customer-view.db` tables have been folded in:
+
+- `items` — inventory **plus merchandising fields** (`visible`, `featured`, `badge`,
+  `sort_order`, `title_override`, `description_override`). Base columns: id, name, type,
+  description, price, mrp, purchase_cost, image_url, location, quantity, created_at, updated_at.
+- `daily_sales` — id, item_id→items.id, quantity_sold, sale_price, sale_date, description.
+- `users` — id, phone (unique), name, **password_hash (argon2id)**, role, created_at, last_login.
+- `sessions` — id, user_id→users.id, token (unique), expires.
+- `settings` — key/value app config (white-label ready; seeded with generic defaults).
+- `user_cart` — id, user_id→users.id, item_id→items.id, qty, added_at, UNIQUE(user_id,item_id).
+
+`stock_status` and `discount_percent` are **computed** in `domain.py`, never stored.
+The "CEA / `cea.db`" in the audit is **not present** — stale; ignore.
+
+API: all routes under `/api/v1`, Universal Response Envelope. Owner routes
+(items/sales/dashboard/settings) require a session token; `/catalog/*` is public and
+exposes **only** customer-safe fields; `/cart/*` is per-authenticated-user.
 
 ## 4. Direction (decided via Council review)
 
