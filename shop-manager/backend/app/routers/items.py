@@ -71,8 +71,15 @@ def update_item(item_id: int, payload: ItemUpdate, conn: sqlite3.Connection = De
     if row is None:
         raise AppError(ErrorCode.NOT_FOUND, "Item not found", status_code=404)
 
-    updatable = ("name", "type", "description", "price", "mrp", "purchase_cost", "location", "quantity")
+    updatable = (
+        "name", "type", "description", "price", "mrp", "purchase_cost", "location", "quantity",
+        "visible", "featured", "badge", "sort_order", "title_override", "description_override",
+    )
     fields = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in updatable}
+    # SQLite stores booleans as 0/1.
+    for bool_field in ("visible", "featured"):
+        if bool_field in fields:
+            fields[bool_field] = int(bool(fields[bool_field]))
     if not fields:
         raise AppError(ErrorCode.VALIDATION, "No updatable fields provided", status_code=400)
 

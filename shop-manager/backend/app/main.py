@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.envelope import failure
 from app.core.errors import AppError, ErrorCode
 from app.db import init_schema
-from app.routers import auth, dashboard, health, items, sales
+from app.routers import auth, cart, catalog, dashboard, health, items, sales, settings as settings_router
 
 logger = logging.getLogger("shop_manager")
 
@@ -64,5 +64,5 @@ async def handle_unexpected(request: Request, exc: Exception):
 
 
 # ── Routers under /api/v1 ─────────────────────────────────
-for module in (health, auth, items, sales, dashboard):
+for module in (health, auth, items, sales, dashboard, catalog, settings_router, cart):
     app.include_router(module.router, prefix=settings.api_prefix)

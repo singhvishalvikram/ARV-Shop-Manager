@@ -33,6 +33,19 @@ class ItemUpdate(BaseModel):
     location: Optional[str] = Field(default=None, max_length=200)
     image_base64: Optional[str] = None
     image_url: Optional[str] = None
+    # Merchandising (catalog) controls — were the separate products table.
+    visible: Optional[bool] = None
+    featured: Optional[bool] = None
+    badge: Optional[str] = Field(default=None, max_length=40)
+    sort_order: Optional[int] = Field(default=None, ge=0)
+    title_override: Optional[str] = Field(default=None, max_length=200)
+    description_override: Optional[str] = Field(default=None, max_length=2000)
+
+
+# ── Cart ──────────────────────────────────────────────────
+class CartAdd(BaseModel):
+    item_id: int = Field(gt=0)
+    qty: int = Field(default=1, ge=1, le=99)
 
 
 # ── Sales ─────────────────────────────────────────────────

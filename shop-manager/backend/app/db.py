@@ -77,8 +77,67 @@ def init_schema() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
             CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
+
+            -- App-wide key/value settings (absorbs customer-view.db settings).
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL DEFAULT ''
+            );
+
+            -- Customer carts (absorbs customer-view.db user_cart). References
+            -- items directly now that there is one product table.
+            CREATE TABLE IF NOT EXISTS user_cart (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                item_id INTEGER NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 1,
+                added_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(user_id, item_id),
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_cart_user ON user_cart(user_id);
             """
         )
+
+        # Merchandising fields move ONTO items (was the separate
+        # customer-view.db `products` table). Additive ALTERs, idempotent.
+        _ensure_column(conn, "items", "visible", "INTEGER NOT NULL DEFAULT 1")
+        _ensure_column(conn, "items", "featured", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(conn, "items", "badge", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(conn, "items", "sort_order", "INTEGER NOT NULL DEFAULT 0")
+        _ensure_column(conn, "items", "title_override", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(conn, "items", "description_override", "TEXT NOT NULL DEFAULT ''")
+
+        _seed_default_settings(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    """Add a column only if absent — SQLite has no ADD COLUMN IF NOT EXISTS.
+    `table`/`column`/`decl` are developer constants, never user input."""
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
+# Generic, white-label-safe defaults (no "ARV" branding — CLAUDE.md §4 Phase 5).
+_DEFAULT_SETTINGS = {
+    "app_title": "",
+    "app_subtitle": "Product Catalog",
+    "whatsapp_number": "",
+    "shop_location": "",
+    "currency_symbol": "₹",
+    "theme_color": "#6366f1",
+    "show_search": "1",
+    "show_category_filter": "1",
+    "show_discount_badges": "1",
+    "show_mrp": "1",
+}
+
+
+def _seed_default_settings(conn: sqlite3.Connection) -> None:
+    for key, value in _DEFAULT_SETTINGS.items():
+        conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
