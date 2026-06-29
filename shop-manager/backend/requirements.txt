@@ -1,1 +1,10 @@
+# Consolidated backend (FastAPI). Standards: Commercial Tier.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+argon2-cffi>=23.1
+pydantic>=2.6
+
+# Legacy Flask app (app.py) — being retired as routes move into app/.
+# Kept installable during the fold-in transition only.
 flask>=3.0
+# Pillow (optional) — image optimization; falls back to base64 if missing.
