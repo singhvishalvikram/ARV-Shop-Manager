@@ -20,6 +20,9 @@ def dashboard(conn: sqlite3.Connection = Depends(get_db)):
     stock_cost = conn.execute(
         "SELECT COALESCE(SUM(purchase_cost * quantity), 0) AS v FROM items"
     ).fetchone()["v"]
+    stock_mrp = conn.execute(
+        "SELECT COALESCE(SUM(mrp * quantity), 0) AS v FROM items"
+    ).fetchone()["v"]
     today_revenue = conn.execute(
         """SELECT COALESCE(SUM(quantity_sold * sale_price), 0) AS r
            FROM daily_sales WHERE DATE(sale_date) = DATE('now')"""
@@ -30,11 +33,22 @@ def dashboard(conn: sqlite3.Connection = Depends(get_db)):
             "SELECT type, COUNT(*) AS count FROM items WHERE type != '' GROUP BY type ORDER BY count DESC"
         ).fetchall()
     ]
+    # recent_items drives the owner UI's low-stock panel. Surface the items most in
+    # need of attention (lowest stock first), capped, with only the fields the panel
+    # renders — this is an owner-only route, so cost fields are acceptable here.
+    recent_items = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT id, name, quantity FROM items ORDER BY quantity ASC, updated_at DESC LIMIT 10"
+        ).fetchall()
+    ]
     return success({
         "total_items": total_items,
         "total_quantity": total_quantity,
         "total_stock_value": round(stock_value, 2),
         "total_stock_cost": round(stock_cost, 2),
+        "total_stock_mrp": round(stock_mrp, 2),
         "today_revenue": round(today_revenue, 2),
         "type_breakdown": type_breakdown,
+        "recent_items": recent_items,
     })
