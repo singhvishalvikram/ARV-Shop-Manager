@@ -32,6 +32,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 
+# CORS only when the catalog is hosted cross-origin (configured via env). The
+# default is same-origin, so no cross-origin access is granted unless asked for.
+if settings.cors_allow_origins:
+    from fastapi.middleware.cors import CORSMiddleware
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allow_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+
 # ── Security headers on every response (GUARDRAILS §2.8) ──
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -117,3 +131,13 @@ if os.path.isdir(settings.frontend_static_dir):
     @app.get("/", include_in_schema=False)
     async def owner_index():
         return FileResponse(settings.owner_index_path)
+
+
+# Optionally serve the customer catalog same-origin at /catalog (one backend,
+# two faces). Additive — does not affect the standalone static catalog deploy.
+if os.path.isdir(settings.catalog_static_dir):
+    app.mount(
+        "/catalog",
+        StaticFiles(directory=settings.catalog_static_dir, html=True),
+        name="catalog",
+    )

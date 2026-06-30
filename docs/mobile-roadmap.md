@@ -264,7 +264,7 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Standards:** ADR (§5.4), supply-chain (GUARDRAILS §6.2).
 - **Exit:** Debug APK runs the owner app full-screen; asset links verified (no URL bar).
 
-### ⬜ Phase 11 — Customer Catalog PWA Refactor
+### 🟦 Phase 11 — Customer Catalog PWA Refactor *(data cutover done w/ fallback; auth/cart Bearer cutover pending)*
 - **Goal:** White-label catalog on `/api/v1/catalog`, WhatsApp checkout.
 - **Tasks:** Catalog/product/cart pages via services; WhatsApp deep-link prefilled from
   `settings.whatsapp_number` + cart; out-of-stock/discount badges; guest cart + optional
@@ -272,6 +272,21 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Deliverables:** `customer-catalog/` complete.
 - **Standards:** §3.x, §4.2; safe-fields guarantee (no cost/location).
 - **Exit:** Browse → cart → WhatsApp works; no owner-only field ever rendered.
+- **🟦 Done so far (2026-06-29) — non-breaking, because the catalog is LIVE for a real shop:**
+  - Catalog **products + settings now read from `/api/v1/catalog/*`**, with a **fallback to
+    the published static `data/*.json`** so it keeps working on static-only hosting / if the
+    API is unreachable. `imgSrc()` handles both API (absolute) and legacy (filename) image
+    URLs. API base via `<meta name="api-base">` or same-origin `/api/v1`.
+  - Catalog can be **served same-origin** from FastAPI at `/catalog` (no CORS needed), and
+    **configurable CORS** added for cross-origin hosting (`CORS_ALLOW_ORIGINS`).
+  - Self-verified (TestClient): `/catalog/` serves, `/catalog/manifest.json` 200,
+    `/api/v1/catalog/products` 200. **65 passed, ruff clean.**
+  - ⬜ **Pending:** move catalog **auth + server cart** off the legacy cookie endpoints
+    (`/api/auth/guest|login`, `/api/cart`) onto Bearer `/api/v1/auth` + `/api/v1/cart`
+    (today they degrade gracefully; local cart + WhatsApp checkout work). Guest cart stays
+    local. Browser-verify on a deployed API.
+  - **Gate:** the live catalog runs on the static-JSON model for a real shop — the hard
+    cutover waits for the API to be deployed + reachable; the fallback keeps it safe now.
 
 ### ⬜ Phase 12 — Catalog Distribution (WhatsApp link + installable PWA)
 - **Goal:** Per-shop shareable catalog, no app store.
@@ -394,3 +409,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 5 DONE: unified service-worker strategy (versioned v5; /api never
   cached; network-first navigations; SWR static). Fixed owner SW scope bug (now served at
   root /sw.js, scope "/"). 63 passed, ruff clean.
+- 2026-06-29 — Phase 11 (partial): catalog products/settings cut over to /api/v1/catalog
+  with static-JSON fallback (non-breaking for the live shop); same-origin /catalog serving
+  + configurable CORS added. Auth/cart Bearer cutover deferred. 65 passed, ruff clean.

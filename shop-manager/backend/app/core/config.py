@@ -39,6 +39,18 @@ class Settings:
     # the URL below resolves); the storage interface is swappable for object
     # storage (S3/GCS) later without touching callers — see image_storage.py and
     # CLAUDE.md §4. Base64-in-DB is retired.
+    # Cross-origin allow-list for the customer catalog when it is hosted on a
+    # different origin (e.g. GitHub Pages) and calls this API. Empty = same-origin
+    # only (no CORS). Comma-separated origins via env.
+    cors_allow_origins: list = [
+        o.strip() for o in os.environ.get("CORS_ALLOW_ORIGINS", "").split(",") if o.strip()
+    ]
+    # The customer catalog can also be served same-origin from this service.
+    catalog_static_dir: str = os.environ.get(
+        "CATALOG_STATIC_DIR",
+        os.path.normpath(os.path.join(_BACKEND_DIR, "..", "..", "customer-view", "site")),
+    )
+
     image_storage_backend: str = os.environ.get("IMAGE_STORAGE_BACKEND", "local")
     images_dir: str = os.environ.get(
         "SHOP_IMAGES_DIR", os.path.join(_BACKEND_DIR, "static", "images", "items")
