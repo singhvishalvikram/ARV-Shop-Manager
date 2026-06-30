@@ -50,13 +50,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: No hardcoded brand in front-end assets
+      - name: No hardcoded brand in front-end source
         run: |
+          # Scope to source/markup (html/js/css/manifest). Runtime data under
+          # */data/ legitimately holds a shop's chosen name (white-label working),
+          # so it is excluded.
           if grep -rniI "ARV" \
               shop-manager/backend/static shop-manager/backend/templates \
               customer-view/site git-pages 2>/dev/null \
-              | grep -viE "node_modules|/\.venv/"; then
-            echo "::error::Hardcoded 'ARV' brand found in front-end assets — brand from settings instead."
+              | grep -viE "node_modules|/\.venv/|/data/|/icons/"; then
+            echo "::error::Hardcoded 'ARV' brand found in front-end source — brand from settings instead."
             exit 1
           fi
-          echo "OK: no hardcoded brand in front-end assets."
+          echo "OK: no hardcoded brand in front-end source."

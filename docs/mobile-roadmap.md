@@ -139,13 +139,26 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
   **46 passed, ruff clean, gate clean.** (CSS theming via `--brand-color` is a follow-up;
   the var + PWA theme-color + titles are config-driven now.)
 
-### ⬜ Phase 4 — PWA Manifest & Icon Pipeline
+### ✅ Phase 4 — PWA Manifest & Icon Pipeline
 - **Goal:** Fix broken installability (empty `icons: []`) and make manifests dynamic.
 - **Tasks:** Generate real PNG icon set (192/512 + maskable) per shop from logo; serve a
   per-shop dynamic manifest; consolidate the duplicate git-pages manifest.
 - **Deliverables:** icon-generation step, dynamic manifest endpoint/template.
 - **Standards:** §3.x PWA; white-label.
 - **Exit:** Lighthouse "Installable" passes for both faces; no empty icon arrays.
+- **✅ Done (2026-06-29):**
+  - Generated real **PNG icons** (192/512, generic/unbranded) for owner + catalog faces
+    (`static/icons/`, `customer-view/site/icons/`) — no more SVG-data-URI-only / empty arrays.
+  - Owner manifest is now **dynamic from settings** (`app/manifest.py` + `/manifest.json`
+    route: name/theme from `settings`, PNG icons incl. `maskable`). Static owner
+    `manifest.json` deleted (one source of truth).
+  - Catalog manifests (`customer-view/site`, `git-pages`) **de-branded** (generic name +
+    real icons); static `<title>`s genericized (JS sets the real title from settings).
+  - **Fixed the Phase-3 white-label gate** (it was passing locally only due to a wrong CWD;
+    it would have been **red in CI**): now scoped to source and excludes runtime `*/data/`
+    (a shop's configured name is legitimate tenant data, not hardcoded brand) and `/icons/`.
+  - Tests: `test_manifest.py` (defaults, branding, endpoint, icons served). **61 passed,
+    ruff clean, gate green from repo root.**
 
 ### ⬜ Phase 5 — Unified Service-Worker Strategy
 - **Goal:** One SW approach (today there are 2–3 inconsistent ones).
@@ -361,3 +374,7 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 8 DONE: swappable image storage (local disk now, S3-ready) with
   type/size validation + safe filenames; wired into item create/update; camera persistence
   gap closed; new uploads gitignored. 57 passed, ruff clean.
+- 2026-06-29 — Phase 4 DONE: real PNG icons (owner + catalog), dynamic settings-branded
+  owner manifest, de-branded catalog manifests/titles, duplicate static owner manifest
+  removed. Also fixed the white-label CI gate (was effectively red in CI; now excludes
+  runtime data/ and passes from repo root). 61 passed, ruff clean.

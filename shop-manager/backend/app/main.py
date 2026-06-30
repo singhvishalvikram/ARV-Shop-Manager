@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.envelope import failure
 from app.core.errors import AppError, ErrorCode
-from app.db import init_schema
+from app.db import get_connection, init_schema
+from app.manifest import build_owner_manifest
 from app.routers import auth, cart, catalog, dashboard, health, items, sales, settings as settings_router
 
 logger = logging.getLogger("shop_manager")
@@ -89,8 +90,18 @@ if os.path.isdir(settings.frontend_static_dir):
 
     @app.get("/manifest.json", include_in_schema=False)
     async def owner_manifest():
-        path = os.path.join(settings.frontend_static_dir, "manifest.json")
-        return FileResponse(path)
+        # Brand the installable app from settings (config-driven, ADR-002).
+        conn = get_connection()
+        try:
+            rows = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM settings")}
+        finally:
+            conn.close()
+        return JSONResponse(
+            build_owner_manifest(
+                name=rows.get("app_title", ""),
+                theme_color=rows.get("theme_color", ""),
+            )
+        )
 
     @app.get("/", include_in_schema=False)
     async def owner_index():
