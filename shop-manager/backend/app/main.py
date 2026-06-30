@@ -6,6 +6,7 @@ Standards: CODING_STANDARDS §4.2 (envelope), §4.6 (versioning), §2.5.1
 """
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -17,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.envelope import failure
 from app.core.errors import AppError, ErrorCode
+from app.core.observability import configure_logging, new_request_id, request_id_ctx
 from app.db import get_connection, init_schema
 from app.manifest import build_owner_manifest
 from app.routers import auth, cart, catalog, dashboard, health, items, sales, settings as settings_router
@@ -25,7 +27,9 @@ logger = logging.getLogger("shop_manager")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
     init_schema()
+    logger.info("startup", extra={"event": "startup", "version": settings.app_version})
     yield
 
 
@@ -73,6 +77,41 @@ async def security_headers(request: Request, call_next):
     return response
 
 
+# ── Request correlation + structured access logging (CODING §4.7) ──
+def _safe_incoming_request_id(value: str) -> str:
+    # Accept a client-supplied id only if it's short and alphanumeric-ish, to
+    # avoid log injection; otherwise generate one.
+    if value and len(value) <= 64 and all(c.isalnum() or c in "-_" for c in value):
+        return value
+    return new_request_id()
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    rid = _safe_incoming_request_id(request.headers.get("x-request-id", ""))
+    token = request_id_ctx.set(rid)
+    request.state.request_id = rid
+    start = time.perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["X-Request-ID"] = rid
+        return response
+    finally:
+        logger.info(
+            "request",
+            extra={
+                "event": "request",
+                "method": request.method,
+                "path": request.url.path,
+                "status": status,
+                "duration_ms": round((time.perf_counter() - start) * 1000, 1),
+            },
+        )
+        request_id_ctx.reset(token)
+
+
 # ── Exception handlers: every error is an envelope (never a raw trace) ──
 @app.exception_handler(AppError)
 async def handle_app_error(request: Request, exc: AppError):
@@ -92,8 +131,13 @@ async def handle_validation_error(request: Request, exc: RequestValidationError)
 
 @app.exception_handler(Exception)
 async def handle_unexpected(request: Request, exc: Exception):
-    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content=failure(ErrorCode.INTERNAL, "Internal server error"))
+    # The request id is auto-included in the structured log via the formatter.
+    logger.exception("unhandled_error", extra={"event": "error", "path": request.url.path})
+    # Surface the correlation id so a user can quote it to support.
+    return JSONResponse(
+        status_code=500,
+        content=failure(ErrorCode.INTERNAL, "Internal server error", {"request_id": request_id_ctx.get()}),
+    )
 
 
 # ── Routers under /api/v1 ─────────────────────────────────

@@ -16,13 +16,14 @@ const TOKEN_STORAGE_KEY = 'session_token';
 
 /** Error carrying the backend error-registry code (§2.5.1). */
 export class ApiError extends Error {
-  /** @param {string} code @param {string} message @param {*} [details] @param {number} [status] */
-  constructor(code, message, details, status) {
+  /** @param {string} code @param {string} message @param {*} [details] @param {number} [status] @param {string} [requestId] */
+  constructor(code, message, details, status, requestId) {
     super(message || code);
     this.name = 'ApiError';
     this.code = code;
     this.details = details;
     this.status = status;
+    this.requestId = requestId; // X-Request-ID, for support correlation
   }
 }
 
@@ -79,15 +80,16 @@ export async function request(path, opts = {}) {
     envelope = null;
   }
 
+  const requestId = response.headers.get('X-Request-ID') || undefined;
   if (envelope && typeof envelope.success === 'boolean') {
     if (envelope.success) return envelope.data;
     const err = envelope.error || {};
-    throw new ApiError(err.code || 'INTERNAL', err.message || 'Request failed', err.details, response.status);
+    throw new ApiError(err.code || 'INTERNAL', err.message || 'Request failed', err.details, response.status, requestId);
   }
 
   // Non-enveloped response (legacy endpoint or proxy error page).
   if (!response.ok) {
-    throw new ApiError('INTERNAL', `Request failed (${response.status})`, null, response.status);
+    throw new ApiError('INTERNAL', `Request failed (${response.status})`, null, response.status, requestId);
   }
   return envelope;
 }

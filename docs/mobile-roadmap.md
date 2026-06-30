@@ -350,13 +350,24 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
     STRIDE controls, retention, known gaps (DSR export/delete, HTTPS-at-edge, inline-JS removal).
   - Tests: `test_security_hardening.py` (rate-limit 429, headers/CSP). **68 passed, ruff clean.**
 
-### ⬜ Phase 18 — Observability, Push & SLOs
+### ✅ Phase 18 — Observability, Push & SLOs *(backend done; FCM push deferred)*
 - **Goal:** Know when mobile breaks; enable engagement.
 - **Tasks:** Structured client error reporting (correlation IDs); backend structured
   logging (§4.7); FCM push for owner app (low-stock/new-order); define SLOs/error budgets.
 - **Deliverables:** error tracking, FCM integration, SLO doc.
 - **Standards:** §4.7, pipeline_ops Module 4 (monitoring, SLOs).
 - **Exit:** Crashes/API errors surface; a test push delivers; SLOs defined.
+- **✅ Done (2026-06-29):**
+  - **Structured JSON logging** (`core/observability.py`): one line per request with
+    `request_id`, method, path, status, `duration_ms`; `startup`/`unhandled_error` events.
+  - **Request correlation IDs:** propagated from/echoed as `X-Request-ID` (unsafe values
+    rejected), in 500 bodies, and surfaced on the client `ApiError.requestId`.
+  - **SLO doc** (`docs/observability/slos.md`): availability/latency/abuse targets + error
+    budget, derivable directly from the log fields.
+  - Tests: `test_observability.py` (header present/propagated/sanitized, JSON formatter).
+    **72 passed, ruff clean.**
+  - ⏳ **Deferred:** FCM push (needs the TWA + FCM creds) and a hosted log/error platform
+    (Sentry/Grafana) — deployment-gated.
 
 ### ⏸️ Phase 19 — Staged Rollout, Canary & Rollback
 - **Goal:** Ship safely with reversibility.
@@ -427,3 +438,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 17 DONE: auth rate-limiting (5/15min → 429), CSP + tightened security
   headers, CI pip-audit (advisory), threat-model/DPDP doc; CSRF posture documented (Bearer-
   only, no ambient cookies). 68 passed, ruff clean.
+- 2026-06-29 — Phase 18 DONE (backend): structured JSON logging + request correlation IDs
+  (X-Request-ID propagated/returned, on ApiError, in 500 bodies); SLO doc. FCM push +
+  hosted log platform deferred (deployment-gated). 72 passed, ruff clean.
