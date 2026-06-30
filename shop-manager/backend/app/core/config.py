@@ -25,5 +25,37 @@ class Settings:
     app_name: str = "ARV Shop Manager API"
     app_version: str = "1.0.0"
 
+    # Owner front-end served by this same service (single origin → relative
+    # /api/v1, no CORS surface). Repo-relative defaults; override via env.
+    frontend_static_dir: str = os.environ.get(
+        "FRONTEND_STATIC_DIR", os.path.join(_BACKEND_DIR, "static")
+    )
+    owner_index_path: str = os.environ.get(
+        "OWNER_INDEX_PATH", os.path.join(_BACKEND_DIR, "templates", "index.html")
+    )
+
+    # Google Sign-In (OIDC via Authlib). Empty by default — the feature is only
+    # enabled when a real OAuth client is configured (see `google_oauth_configured`).
+    # Secrets live here via env only, never in source (GUARDRAILS §1.4).
+    google_client_id: str = os.environ.get("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    # Absolute callback URL registered in the Google Cloud console, e.g.
+    # https://app.example.com/api/v1/auth/google/callback
+    google_redirect_uri: str = os.environ.get("GOOGLE_REDIRECT_URI", "")
+    # Where to send the browser after a successful Google login. The session
+    # token is appended in the URL fragment (#token=...) for the PWA to read.
+    oauth_success_redirect: str = os.environ.get("OAUTH_SUCCESS_REDIRECT", "/")
+
+    @property
+    def google_oauth_configured(self) -> bool:
+        """Google Sign-In is wired only when an OAuth client, redirect URI, and a
+        signing secret (for the OAuth state cookie) are all present."""
+        return bool(
+            self.google_client_id
+            and self.google_client_secret
+            and self.google_redirect_uri
+            and self.auth_secret
+        )
+
 
 settings = Settings()

@@ -117,6 +117,51 @@
     text-decoration: underline;
 }
 
+/* ========== Login form (replaces the PIN pad) ========== */
+.login-form {
+    width: 100%;
+    max-width: 320px;
+    text-align: left;
+    margin: 0 auto 6px;
+}
+
+.login-form .form-group { margin-bottom: 14px; }
+
+.login-form label {
+    display: block;
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 6px;
+}
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+    margin: 14px auto;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.2);
+}
+
+.lock-hint a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: underline;
+}
+
+#googleLoginBtn {
+    max-width: 320px;
+    margin: 0 auto;
+}
+
 /* ========== Search Results Dropdown ========== */
 .search-results {
     position: absolute;

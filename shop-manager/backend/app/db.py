@@ -109,6 +109,24 @@ def init_schema() -> None:
         _ensure_column(conn, "items", "title_override", "TEXT NOT NULL DEFAULT ''")
         _ensure_column(conn, "items", "description_override", "TEXT NOT NULL DEFAULT ''")
 
+        # Federated-login support (Google OIDC). Additive, idempotent (expand/
+        # contract, GUARDRAILS §6.1). `phone`/`password_hash` stay for password
+        # users; OAuth users carry an empty password_hash (cannot password-login)
+        # and identify by (auth_provider, provider_sub). `email` enables linking
+        # a Google account to an existing record.
+        _ensure_column(conn, "users", "email", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(conn, "users", "auth_provider", "TEXT NOT NULL DEFAULT 'password'")
+        _ensure_column(conn, "users", "provider_sub", "TEXT NOT NULL DEFAULT ''")
+        # Partial unique indexes so blanks (password users) don't collide.
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email "
+            "ON users(email) WHERE email != ''"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider "
+            "ON users(auth_provider, provider_sub) WHERE provider_sub != ''"
+        )
+
         _seed_default_settings(conn)
         conn.commit()
     finally:

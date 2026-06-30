@@ -70,7 +70,7 @@ def require_auth(
     if not token:
         raise AppError(ErrorCode.UNAUTHORIZED, "Authentication required", status_code=401)
     row = conn.execute(
-        """SELECT u.id, u.phone, u.name, u.role
+        """SELECT u.id, u.phone, u.name, u.role, u.email, u.auth_provider
            FROM sessions s JOIN users u ON s.user_id = u.id
            WHERE s.token = ? AND s.expires > ?""",
         (token, datetime.now(timezone.utc).isoformat()),

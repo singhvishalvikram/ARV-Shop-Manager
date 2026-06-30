@@ -13,59 +13,33 @@
     <meta name="theme-color" content="#2196F3">
 </head>
 <body>
-    <!-- Lock Screen -->
+    <!-- Login Screen (server-side auth; replaces the client-side PIN) -->
     <div id="lockScreen" class="lock-screen">
         <div class="lock-container">
             <div class="lock-icon">📦</div>
             <h1>Shop Manager</h1>
-            <p class="lock-subtitle">Enter PIN to unlock</p>
-            <div class="pin-display" id="pinDisplay">
-                <span class="pin-dot" id="dot1"></span>
-                <span class="pin-dot" id="dot2"></span>
-                <span class="pin-dot" id="dot3"></span>
-                <span class="pin-dot" id="dot4"></span>
-            </div>
-            <div class="pin-pad">
-                <button class="pin-btn" onclick="enterPin(1)">1</button>
-                <button class="pin-btn" onclick="enterPin(2)">2</button>
-                <button class="pin-btn" onclick="enterPin(3)">3</button>
-                <button class="pin-btn" onclick="enterPin(4)">4</button>
-                <button class="pin-btn" onclick="enterPin(5)">5</button>
-                <button class="pin-btn" onclick="enterPin(6)">6</button>
-                <button class="pin-btn" onclick="enterPin(7)">7</button>
-                <button class="pin-btn" onclick="enterPin(8)">8</button>
-                <button class="pin-btn" onclick="enterPin(9)">9</button>
-                <button class="pin-btn pin-clear" onclick="clearPin()">C</button>
-                <button class="pin-btn" onclick="enterPin(0)">0</button>
-                <button class="pin-btn pin-back" onclick="backspacePin()">⌫</button>
-            </div>
-            <p class="lock-error" id="lockError"></p>
-            <p class="lock-hint">Default PIN: 1234</p>
-            <div class="lock-setup" id="lockSetup">
-                <a href="#" onclick="showSetPin()">Change PIN</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Set PIN Modal -->
-    <div id="setPinModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:360px;">
-            <span class="modal-close" onclick="closeSetPinModal()">&times;</span>
-            <h2 style="margin-bottom:15px;">Set New PIN</h2>
-            <div class="form-group">
-                <label>Current PIN</label>
-                <input type="password" id="setPinCurrent" class="form-control" maxlength="4" inputmode="numeric">
-            </div>
-            <div class="form-group">
-                <label>New PIN (4 digits)</label>
-                <input type="password" id="setPinNew" class="form-control" maxlength="4" inputmode="numeric">
-            </div>
-            <div class="form-group">
-                <label>Confirm New PIN</label>
-                <input type="password" id="setPinConfirm" class="form-control" maxlength="4" inputmode="numeric">
-            </div>
-            <p class="lock-error" id="setPinError"></p>
-            <button onclick="doSetPin()" class="btn-primary btn-block">Set PIN</button>
+            <p class="lock-subtitle">Sign in to continue</p>
+            <form id="loginForm" class="login-form" autocomplete="on">
+                <div class="form-group">
+                    <label for="loginPhone">Phone</label>
+                    <input type="tel" id="loginPhone" class="form-control" inputmode="tel"
+                           autocomplete="username" placeholder="e.g. 919876543210" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" class="form-control"
+                           autocomplete="current-password" required>
+                </div>
+                <p class="lock-error" id="lockError"></p>
+                <button type="submit" id="loginSubmitBtn" class="btn-primary btn-block">Sign In</button>
+            </form>
+            <div class="login-divider"><span>or</span></div>
+            <button type="button" id="googleLoginBtn" class="btn-secondary btn-block">
+                Sign in with Google
+            </button>
+            <p class="lock-hint">
+                New here? <a href="#" id="showSignupLink">Create an owner account</a>
+            </p>
         </div>
     </div>
 
@@ -84,7 +58,7 @@
             <li style="border-top: 1px solid rgba(255,255,255,0.15); margin-top:8px; padding-top:8px;">
                 <a href="#" onclick="showBackupModal(event)">💾 Backup & Restore</a>
             </li>
-            <li><a href="#" onclick="lockApp(event)">🔒 Lock</a></li>
+            <li><a href="#" onclick="logout(event)">🔒 Logout</a></li>
         </ul>
     </nav>
 
@@ -369,14 +343,15 @@
     <script>
         // Register service worker with auto-update
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/js/sw.js?v=3').catch(() => {});
+            navigator.serviceWorker.register('/static/js/sw.js?v=4').catch(() => {});
             // Force page reload when new SW activates
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
             });
         }
     </script>
-    <script src="/static/js/localdb.js?v=3"></script>
-    <script src="/static/js/app.js?v=3"></script>
+    <script type="module" src="/static/shared/api-globals.js?v=4"></script>
+    <script src="/static/js/localdb.js?v=4"></script>
+    <script src="/static/js/app.js?v=4"></script>
 </body>
 </html>

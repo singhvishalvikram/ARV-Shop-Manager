@@ -4,6 +4,12 @@ uvicorn[standard]>=0.29
 argon2-cffi>=23.1
 pydantic>=2.6
 
+# Google Sign-In (OIDC) — OPTIONAL. Required only when GOOGLE_CLIENT_ID etc. are
+# set; the Google routes (and these imports) load only then (ADR-004).
+authlib>=1.3
+itsdangerous>=2.1  # signed OAuth-state session cookie (Starlette SessionMiddleware)
+httpx>=0.27        # Authlib's async OIDC metadata/token HTTP calls
+
 # Legacy Flask app (app.py) — being retired as routes move into app/.
 # Kept installable during the fold-in transition only.
 flask>=3.0

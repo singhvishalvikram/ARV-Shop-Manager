@@ -5,12 +5,14 @@ Standards: CODING_STANDARDS §4.2 (envelope), §4.6 (versioning), §2.5.1
 (error registry); GUARDRAILS §2.6 (no leaked exceptions), §2.8 (security headers).
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.envelope import failure
@@ -66,3 +68,30 @@ async def handle_unexpected(request: Request, exc: Exception):
 # ── Routers under /api/v1 ─────────────────────────────────
 for module in (health, auth, items, sales, dashboard, catalog, settings_router, cart):
     app.include_router(module.router, prefix=settings.api_prefix)
+
+# Google Sign-In is optional: its router (and the Authlib dependency) load ONLY
+# when an OAuth client is configured, so the core service and tests run without it.
+if settings.google_oauth_configured:
+    from app.routers.auth_google import setup_google
+
+    setup_google(app)
+
+
+# ── Owner front-end (same origin as the API) ──────────────
+# Served only when the static bundle is present, so the API can also run
+# headless (tests, API-only deploys). The catalog stays a separate face.
+if os.path.isdir(settings.frontend_static_dir):
+    app.mount(
+        "/static",
+        StaticFiles(directory=settings.frontend_static_dir),
+        name="static",
+    )
+
+    @app.get("/manifest.json", include_in_schema=False)
+    async def owner_manifest():
+        path = os.path.join(settings.frontend_static_dir, "manifest.json")
+        return FileResponse(path)
+
+    @app.get("/", include_in_schema=False)
+    async def owner_index():
+        return FileResponse(settings.owner_index_path)
