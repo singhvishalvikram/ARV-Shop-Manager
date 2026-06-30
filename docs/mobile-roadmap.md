@@ -451,3 +451,5 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 7 DONE: idempotency keys (Idempotency-Key header + idempotency_keys
   table) so offline-queue replays don't double-post; owner queue sends a stable key per add.
   75 passed, ruff clean.
+- 2026-06-29 — Operator docs added (docs/operator/): run-and-verify checklist, Google OAuth
+  setup, deployment guide, and the action-items checklist (what blocks what). Partial Phase 20.
