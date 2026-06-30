@@ -160,7 +160,7 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
   - Tests: `test_manifest.py` (defaults, branding, endpoint, icons served). **61 passed,
     ruff clean, gate green from repo root.**
 
-### ⬜ Phase 5 — Unified Service-Worker Strategy
+### ✅ Phase 5 — Unified Service-Worker Strategy
 - **Goal:** One SW approach (today there are 2–3 inconsistent ones).
 - **Tasks:** Single versioned `service-worker.js` (cache-first shell, network-first
   API/data), explicit version bump + update-on-reload flow, offline fallback; scope per
@@ -168,6 +168,19 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Deliverables:** `shared/pwa/service-worker.js`, update lifecycle.
 - **Standards:** GUARDRAILS resilience (offline), §3.9 loading/empty/error states.
 - **Exit:** Offline load works; new deploy reliably updates clients; no stale-cache lock.
+- **✅ Done (2026-06-29):** One canonical SW strategy applied to both faces (owner
+  `static/js/sw.js`, catalog `git-pages/sw.js`), versioned (`v5`):
+    - **/api/ is never cached** (was: everything cached — a per-session staleness/leak
+      risk); navigations are network-first → cache → offline page; static assets use
+      stale-while-revalidate.
+    - **Fixed a real scope bug:** the owner SW was registered at `/static/js/sw.js`, scoping
+      it to `/static/js/` so it never controlled the app. Now served at **root `/sw.js`**
+      (FastAPI route, `Service-Worker-Allowed: /`) and registered with `scope:'/'`.
+    - Update flow hardened (single controllerchange reload, no reload loop).
+  - Tests: `test_service_worker.py` (root serve + scope header + API-skip). **63 passed,
+    ruff clean.**
+  - Note: `customer-view/site` has no SW registration yet — added with the catalog work
+    (Phase 11/12).
 
 ### ✅ Phase 6 — Owner PWA Consolidation  *(backend + frontend cutover done; browser-verify + Google creds pending)*
 - **Goal:** Make the owner manager the single installable owner app on `/api/v1`.
@@ -378,3 +391,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
   owner manifest, de-branded catalog manifests/titles, duplicate static owner manifest
   removed. Also fixed the white-label CI gate (was effectively red in CI; now excludes
   runtime data/ and passes from repo root). 61 passed, ruff clean.
+- 2026-06-29 — Phase 5 DONE: unified service-worker strategy (versioned v5; /api never
+  cached; network-first navigations; SWR static). Fixed owner SW scope bug (now served at
+  root /sw.js, scope "/"). 63 passed, ruff clean.

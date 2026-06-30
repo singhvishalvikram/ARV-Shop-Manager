@@ -103,6 +103,17 @@ if os.path.isdir(settings.frontend_static_dir):
             )
         )
 
+    @app.get("/sw.js", include_in_schema=False)
+    async def service_worker():
+        # Served from the root so the SW scope is "/" (controls the whole app).
+        # Service-Worker-Allowed lets the file live under /static if ever moved.
+        path = os.path.join(settings.frontend_static_dir, "js", "sw.js")
+        return FileResponse(
+            path,
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"},
+        )
+
     @app.get("/", include_in_schema=False)
     async def owner_index():
         return FileResponse(settings.owner_index_path)

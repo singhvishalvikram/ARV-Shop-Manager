@@ -341,11 +341,15 @@
     </div>
 
     <script>
-        // Register service worker with auto-update
+        // Register the service worker from the root so its scope is "/" (it
+        // controls the whole app, not just /static/js/).
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/js/sw.js?v=4').catch(() => {});
-            // Force page reload when new SW activates
+            navigator.serviceWorker.register('/sw.js?v=5', { scope: '/' }).catch(() => {});
+            // Reload once when a new SW takes control, so updates apply.
+            let reloaded = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (reloaded) return;
+                reloaded = true;
                 window.location.reload();
             });
         }
