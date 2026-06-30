@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.envelope import success
 from app.core.errors import AppError, ErrorCode
+from app.core.image_storage import ImageValidationError, get_image_storage
 from app.core.security import require_auth
 from app.db import get_db
 from app.schemas import ItemCreate, ItemUpdate
@@ -51,14 +52,20 @@ def create_item(payload: ItemCreate, conn: sqlite3.Connection = Depends(get_db))
     purchase_cost = (
         payload.purchase_cost if payload.purchase_cost is not None else round(payload.price * 0.8, 2)
     )
-    # NOTE: image_base64 is intentionally not persisted yet. Base64-in-DB is
-    # being retired in favour of object storage (see CLAUDE.md §4); wiring that
-    # is a follow-up ticket, not part of this auth/consolidation slice.
+    # Persist the image via the storage backend (local disk now, object storage
+    # later — see image_storage.py). Validation failures become 400s.
+    image_url = ""
+    if payload.image_base64:
+        try:
+            image_url = get_image_storage().save(payload.image_base64)
+        except ImageValidationError as exc:
+            raise AppError(ErrorCode.VALIDATION, str(exc), status_code=400)
     cursor = conn.execute(
-        """INSERT INTO items (name, type, description, price, mrp, purchase_cost, location, quantity)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO items (name, type, description, price, mrp, purchase_cost,
+                              location, quantity, image_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (payload.name.strip(), payload.type.strip(), payload.description.strip(),
-         payload.price, mrp, purchase_cost, payload.location.strip(), payload.quantity),
+         payload.price, mrp, purchase_cost, payload.location.strip(), payload.quantity, image_url),
     )
     conn.commit()
     row = conn.execute("SELECT * FROM items WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -75,11 +82,24 @@ def update_item(item_id: int, payload: ItemUpdate, conn: sqlite3.Connection = De
         "name", "type", "description", "price", "mrp", "purchase_cost", "location", "quantity",
         "visible", "featured", "badge", "sort_order", "title_override", "description_override",
     )
-    fields = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in updatable}
+    data = payload.model_dump(exclude_unset=True)
+    fields = {k: v for k, v in data.items() if k in updatable}
     # SQLite stores booleans as 0/1.
     for bool_field in ("visible", "featured"):
         if bool_field in fields:
             fields[bool_field] = int(bool(fields[bool_field]))
+
+    # Image: a new capture (image_base64) is stored and replaces the URL; an
+    # explicit image_url (e.g. "") sets/clears it directly.
+    old_image_url = row["image_url"]
+    if data.get("image_base64"):
+        try:
+            fields["image_url"] = get_image_storage().save(data["image_base64"])
+        except ImageValidationError as exc:
+            raise AppError(ErrorCode.VALIDATION, str(exc), status_code=400)
+    elif "image_url" in data:
+        fields["image_url"] = data["image_url"]
+
     if not fields:
         raise AppError(ErrorCode.VALIDATION, "No updatable fields provided", status_code=400)
 
@@ -87,6 +107,12 @@ def update_item(item_id: int, payload: ItemUpdate, conn: sqlite3.Connection = De
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", [*fields.values(), item_id])
     conn.commit()
+
+    # Clean up a replaced local image (best-effort; never blocks the response).
+    new_image_url = fields.get("image_url")
+    if new_image_url is not None and old_image_url and old_image_url != new_image_url:
+        get_image_storage().delete(old_image_url)
+
     row = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
     return success(_row_to_item(row))
 

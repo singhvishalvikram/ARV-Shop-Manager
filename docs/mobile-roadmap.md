@@ -204,13 +204,23 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Standards:** §4.9 idempotency, GUARDRAILS race-condition checks.
 - **Exit:** Add item offline → reconnect → single server record; no duplicates.
 
-### ⬜ Phase 8 — Camera / Image Capture → Object Storage
+### ✅ Phase 8 — Camera / Image Capture → Object Storage *(local-disk now, S3-swappable)*
 - **Goal:** Clean image pipeline; stop base64-in-DB.
 - **Tasks:** `getUserMedia` capture component; client compress; upload to object storage
   via `/api/v1/items/{id}/image`; HTTPS guard.
 - **Deliverables:** capture component + upload service + backend endpoint.
 - **Standards:** GUARDRAILS file-upload validation (type/size), §2.4 sizing.
 - **Exit:** Photo → optimized object-storage URL on item; no base64 blobs persisted.
+- **✅ Done (2026-06-29):** `app/core/image_storage.py` — a swappable `ImageStorage`
+  interface with a `LocalDiskImageStorage` impl (env `IMAGE_STORAGE_BACKEND`, ready for an
+  S3/GCS backend later, CLAUDE.md §4). Validates data-URL **type + size**, server-generated
+  filenames (no path-traversal), best-effort Pillow downscale/recompress (optional dep).
+  Wired into item create/update (existing camera forms now persist; old image cleaned up on
+  replace). **11 tests** (decode/validation, disk round-trip, API persist/clear/reject).
+  `.gitignore` keeps new uploads out of source. **57 passed, ruff clean.**
+  - **Note:** images persist to disk under the served static dir (single host). The
+    object-storage backend is the swap for multi-instance scale — interface is in place so
+    that swap touches no callers. The earlier "camera captures don't save" gap is **closed**.
 
 ### ⬜ Phase 9 — Owner App Test Suite
 - **Goal:** Meet Commercial coverage for the owner face.
@@ -348,3 +358,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 3 DONE: config-driven white-label branding (runtime-config.js applies
   shop settings to title/theme; window.Branding bridge; API de-branded; CI white-label-gate
   blocks hardcoded brand). 46 passed, ruff clean, gate clean.
+- 2026-06-29 — Phase 8 DONE: swappable image storage (local disk now, S3-ready) with
+  type/size validation + safe filenames; wired into item create/update; camera persistence
+  gap closed; new uploads gitignored. 57 passed, ruff clean.

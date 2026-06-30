@@ -35,6 +35,17 @@ class Settings:
         "OWNER_INDEX_PATH", os.path.join(_BACKEND_DIR, "templates", "index.html")
     )
 
+    # Item images. Stored on disk now (must live under the served static dir so
+    # the URL below resolves); the storage interface is swappable for object
+    # storage (S3/GCS) later without touching callers — see image_storage.py and
+    # CLAUDE.md §4. Base64-in-DB is retired.
+    image_storage_backend: str = os.environ.get("IMAGE_STORAGE_BACKEND", "local")
+    images_dir: str = os.environ.get(
+        "SHOP_IMAGES_DIR", os.path.join(_BACKEND_DIR, "static", "images", "items")
+    )
+    image_url_prefix: str = os.environ.get("IMAGE_URL_PREFIX", "/static/images/items")
+    image_max_bytes: int = int(os.environ.get("IMAGE_MAX_BYTES", str(5 * 1024 * 1024)))
+
     # Google Sign-In (OIDC via Authlib). Empty by default — the feature is only
     # enabled when a real OAuth client is configured (see `google_oauth_configured`).
     # Secrets live here via env only, never in source (GUARDRAILS §1.4).

@@ -45,6 +45,13 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ─── Runtime item-image uploads (served data, not source) ──
+# New uploads (item_<hex>.<ext>) are runtime artifacts. Already-tracked legacy
+# images stay tracked (the catalog may reference them); only new files here are
+# ignored. Object storage will remove this concern entirely (CLAUDE.md §4).
+shop-manager/backend/static/images/items/*
+!shop-manager/backend/static/images/items/.gitkeep
+
 # ─── Misc ─────────────────────────────────────────────────
 backups/
 /tmp/

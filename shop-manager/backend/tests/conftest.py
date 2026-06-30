@@ -17,6 +17,8 @@ def client(monkeypatch):
     tmp_dir = tempfile.mkdtemp()
     db_path = os.path.join(tmp_dir, "test_shop.db")
     monkeypatch.setenv("SHOP_DB_PATH", db_path)
+    # Isolate item-image writes to a throwaway dir (never the repo static dir).
+    monkeypatch.setenv("SHOP_IMAGES_DIR", os.path.join(tmp_dir, "images"))
 
     # Import lazily so config reads the patched env. Reload to drop any cached
     # settings from a previous test.
