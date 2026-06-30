@@ -17,7 +17,7 @@
     <div id="lockScreen" class="lock-screen">
         <div class="lock-container">
             <div class="lock-icon">📦</div>
-            <h1>Shop Manager</h1>
+            <h1 data-brand-title>Shop Manager</h1>
             <p class="lock-subtitle">Sign in to continue</p>
             <form id="loginForm" class="login-form" autocomplete="on">
                 <div class="form-group">
@@ -47,7 +47,7 @@
     <div class="drawer-overlay" id="drawerOverlay"></div>
     <nav class="drawer" id="navigationDrawer">
         <div class="drawer-header">
-            <h2>📦 Shop Manager</h2>
+            <h2>📦 <span data-brand-title>Shop Manager</span></h2>
             <button class="drawer-close" onclick="closeDrawer()">&times;</button>
         </div>
         <ul class="drawer-menu">
@@ -66,7 +66,7 @@
         <!-- Header with Menu Button -->
         <header>
             <button class="menu-btn" onclick="openDrawer()">☰</button>
-            <h1>📦 Shop Manager</h1>
+            <h1>📦 <span data-brand-title>Shop Manager</span></h1>
             <div class="header-info">
                 <span id="onlineStatus" class="online-badge">● Online</span>
                 <button id="installBtn" class="btn-small" style="display:none;">Install App</button>

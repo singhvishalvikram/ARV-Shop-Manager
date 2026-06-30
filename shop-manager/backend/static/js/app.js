@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupOnlineOfflineListeners();
     checkOnlineStatus();
 
+    // Apply white-label branding from shop settings (public; works pre-login).
+    try { await window.Branding.loadBranding(); } catch (e) { /* defaults stand */ }
+
     // Gate on a real server session. A Google redirect token (if any) was already
     // captured by api-globals.js before this ran.
     if (await hasValidSession()) {

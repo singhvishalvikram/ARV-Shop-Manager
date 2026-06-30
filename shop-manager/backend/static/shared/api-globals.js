@@ -15,6 +15,7 @@ import * as catalog from './api/catalog-service.js';
 import * as cart from './api/cart-service.js';
 import * as settings from './api/settings-service.js';
 import { ApiError, getToken, setToken } from './api/http-client.js';
+import * as branding from './config/runtime-config.js';
 
 // Capture a session token arriving from the Google OIDC redirect, before any
 // app logic runs.
@@ -22,4 +23,5 @@ auth.captureTokenFromFragment();
 
 window.API = { items, sales, dashboard, catalog, cart, settings };
 window.Auth = { ...auth, getToken, setToken };
+window.Branding = branding;
 window.ApiError = ApiError;

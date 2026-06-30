@@ -53,3 +53,10 @@ def test_public_settings_excludes_non_public_keys(auth_client, client):
     public = client.get("/api/v1/catalog/settings").json()["data"]
     assert public["app_title"] == "My Shop"
     assert "secret_internal_key" not in public
+
+
+def test_public_settings_expose_brandable_keys(client):
+    # The white-label branding layer reads these from /catalog/settings.
+    public = client.get("/api/v1/catalog/settings").json()["data"]
+    for key in ("app_title", "app_subtitle", "theme_color", "currency_symbol"):
+        assert key in public, f"branding key missing from public settings: {key}"

@@ -22,7 +22,8 @@ class Settings:
 
     # API
     api_prefix: str = "/api/v1"
-    app_name: str = "ARV Shop Manager API"
+    # White-label: no tenant brand baked in (per-shop name comes from settings).
+    app_name: str = os.environ.get("APP_NAME", "Shop Manager API")
     app_version: str = "1.0.0"
 
     # Owner front-end served by this same service (single origin → relative

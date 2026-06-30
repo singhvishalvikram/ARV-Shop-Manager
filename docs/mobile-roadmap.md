@@ -122,7 +122,7 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
     Phase 6 (auth) + a small Phase-6-prep backend dashboard-parity fix; image persistence
     rides Phase 8. The service layer stands ready so those phases are pure wiring.
 
-### ⬜ Phase 3 — Config-Driven White-Label Branding
+### ✅ Phase 3 — Config-Driven White-Label Branding
 - **Goal:** Remove hardcoded "ARV ENTERPRISES"/colors; brand from `settings`.
 - **Tasks:** `runtime-config.js` loads `/api/v1/catalog/settings` (app_title,
   theme_color, currency, whatsapp_number, logo); apply to DOM/theme/title; CI grep-gate
@@ -130,6 +130,14 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Deliverables:** config layer + theming; CI check.
 - **Standards:** CLAUDE.md §4 Phase 5; §3.4 (no hardcoded colors); §3.9 (no secrets).
 - **Exit:** Changing a shop's `settings` changes the app's name/theme with no rebuild.
+- **✅ Done (2026-06-29):** `static/shared/config/runtime-config.js` loads public
+  `/catalog/settings` and applies `app_title`/`app_subtitle`/`theme_color` to the document
+  (title, theme-color meta, `--brand-color` var, `data-brand-title` elements) with generic
+  fallbacks; wired into the owner app pre-login via the `window.Branding` bridge. API title
+  de-branded to "Shop Manager API" (env-overridable). **CI `white-label-gate`** fails the
+  build on any hardcoded "ARV" in front-end assets. Test asserts the public brand keys.
+  **46 passed, ruff clean, gate clean.** (CSS theming via `--brand-color` is a follow-up;
+  the var + PWA theme-color + titles are config-driven now.)
 
 ### ⬜ Phase 4 — PWA Manifest & Icon Pipeline
 - **Goal:** Fix broken installability (empty `icons: []`) and make manifests dynamic.
@@ -335,3 +343,8 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
   11 fetch sites repointed to the shared service layer (window.API bridge). Self-verified
   via TestClient (module graph serves, auth gate enforced). 45 passed, ruff clean. Browser
   verification + Google OAuth creds pending on owner.
+- 2026-06-29 — Committed the increment as 4 atomic commits (docs / dashboard / service
+  layer / auth+cutover).
+- 2026-06-29 — Phase 3 DONE: config-driven white-label branding (runtime-config.js applies
+  shop settings to title/theme; window.Branding bridge; API de-branded; CI white-label-gate
+  blocks hardcoded brand). 46 passed, ruff clean, gate clean.
