@@ -1163,10 +1163,16 @@ function loadFromCache(key) {
     }
 }
 
+function newIdempotencyKey() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'idem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+}
+
 function saveOfflineAction(action, data) {
     try {
         const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
-        actions.push({ action, data, timestamp: Date.now() });
+        // Stable key per queued action so replay on reconnect can't double-post.
+        actions.push({ action, data, key: newIdempotencyKey(), timestamp: Date.now() });
         localStorage.setItem('offlineActions', JSON.stringify(actions));
     } catch (e) {
         console.warn('Could not save offline action');
@@ -1178,7 +1184,7 @@ async function syncOfflineData() {
         const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
         for (const action of actions) {
             if (action.action === 'addItem') {
-                await window.API.items.createItem(action.data);
+                await window.API.items.createItem(action.data, { idempotencyKey: action.key });
             }
         }
         localStorage.removeItem('offlineActions');

@@ -97,6 +97,16 @@ def init_schema() -> None:
                 FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS idx_cart_user ON user_cart(user_id);
+
+            -- Idempotency keys so a retried/replayed create (e.g. an offline
+            -- queue flush) does not double-insert. Maps a client key to the
+            -- row it created. (GUARDRAILS race-condition / §4.9 idempotency.)
+            CREATE TABLE IF NOT EXISTS idempotency_keys (
+                key TEXT PRIMARY KEY,
+                resource TEXT NOT NULL,
+                resource_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
             """
         )
 

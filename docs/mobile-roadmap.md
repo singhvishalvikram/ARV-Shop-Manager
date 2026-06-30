@@ -222,13 +222,20 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
   - **Owner action item:** create a Google Cloud OAuth client and set `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `AUTH_SECRET` (see `.env.example`).
 
-### ⬜ Phase 7 — Owner Offline & Sync Hardening
+### ✅ Phase 7 — Owner Offline & Sync Hardening *(idempotency done; deeper sync later)*
 - **Goal:** Reliable offline inventory/sales with queued sync.
 - **Tasks:** IndexedDB cache + offline action queue; replay on reconnect; idempotency keys
   (§4.1, §4.9) so replays don't double-post; conflict policy.
 - **Deliverables:** offline queue module + sync engine.
 - **Standards:** §4.9 idempotency, GUARDRAILS race-condition checks.
 - **Exit:** Add item offline → reconnect → single server record; no duplicates.
+- **✅ Done (2026-06-29):** **Idempotency keys** end-to-end — `idempotency_keys` table
+  maps a client key → created row; `POST /items` honors an `Idempotency-Key` header and
+  returns the original item on replay (with a race-safe conflict path). The owner offline
+  queue generates a stable key per queued add and replays with it, so reconnect can't
+  double-post. Tests: `test_idempotency.py` (dedupe, distinct keys, no-key). **75 passed.**
+  - Note: IndexedDB cache + richer two-way conflict resolution remain a later enhancement;
+    the double-post correctness risk (the important one) is closed.
 
 ### ✅ Phase 8 — Camera / Image Capture → Object Storage *(local-disk now, S3-swappable)*
 - **Goal:** Clean image pipeline; stop base64-in-DB.
@@ -441,3 +448,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 18 DONE (backend): structured JSON logging + request correlation IDs
   (X-Request-ID propagated/returned, on ApiError, in 500 bodies); SLO doc. FCM push +
   hosted log platform deferred (deployment-gated). 72 passed, ruff clean.
+- 2026-06-29 — Phase 7 DONE: idempotency keys (Idempotency-Key header + idempotency_keys
+  table) so offline-queue replays don't double-post; owner queue sends a stable key per add.
+  75 passed, ruff clean.

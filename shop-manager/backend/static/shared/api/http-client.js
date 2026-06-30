@@ -49,13 +49,14 @@ export function setToken(token) {
 /**
  * Core request. Returns the unwrapped `data` payload.
  * @param {string} path  path under the API base, e.g. '/items'
- * @param {{ method?: string, body?: *, signal?: AbortSignal, auth?: boolean }} [opts]
+ * @param {{ method?: string, body?: *, signal?: AbortSignal, auth?: boolean, idempotencyKey?: string }} [opts]
  * @returns {Promise<*>}
  */
 export async function request(path, opts = {}) {
-  const { method = 'GET', body, signal, auth = true } = opts;
+  const { method = 'GET', body, signal, auth = true, idempotencyKey } = opts;
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
   const token = auth ? getToken() : null;
   if (token) headers['Authorization'] = `Bearer ${token}`;

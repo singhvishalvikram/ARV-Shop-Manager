@@ -2,8 +2,9 @@
 public catalog must never expose, so every route requires auth."""
 import sqlite3
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 
 from app.core.envelope import success
 from app.core.errors import AppError, ErrorCode
@@ -47,7 +48,25 @@ def get_item(item_id: int, conn: sqlite3.Connection = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-def create_item(payload: ItemCreate, conn: sqlite3.Connection = Depends(get_db)):
+def create_item(
+    payload: ItemCreate,
+    conn: sqlite3.Connection = Depends(get_db),
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+):
+    # Replay protection: if this key already created an item, return that item
+    # instead of inserting a duplicate (offline-queue flush / retried request).
+    if idempotency_key:
+        prior = conn.execute(
+            "SELECT resource_id FROM idempotency_keys WHERE key = ? AND resource = 'item'",
+            (idempotency_key,),
+        ).fetchone()
+        if prior:
+            row = conn.execute(
+                "SELECT * FROM items WHERE id = ?", (prior["resource_id"],)
+            ).fetchone()
+            if row is not None:
+                return success(_row_to_item(row))
+
     mrp = payload.mrp if payload.mrp is not None else round(payload.price * 1.2, 2)
     purchase_cost = (
         payload.purchase_cost if payload.purchase_cost is not None else round(payload.price * 0.8, 2)
@@ -67,8 +86,26 @@ def create_item(payload: ItemCreate, conn: sqlite3.Connection = Depends(get_db))
         (payload.name.strip(), payload.type.strip(), payload.description.strip(),
          payload.price, mrp, purchase_cost, payload.location.strip(), payload.quantity, image_url),
     )
+    new_id = cursor.lastrowid
+    if idempotency_key:
+        # Record the key. If a concurrent request won the race (same key), drop
+        # our duplicate and return the winner's item.
+        try:
+            conn.execute(
+                "INSERT INTO idempotency_keys (key, resource, resource_id) VALUES (?, 'item', ?)",
+                (idempotency_key, new_id),
+            )
+        except sqlite3.IntegrityError:
+            conn.execute("DELETE FROM items WHERE id = ?", (new_id,))
+            conn.commit()
+            winner = conn.execute(
+                "SELECT resource_id FROM idempotency_keys WHERE key = ? AND resource = 'item'",
+                (idempotency_key,),
+            ).fetchone()
+            row = conn.execute("SELECT * FROM items WHERE id = ?", (winner["resource_id"],)).fetchone()
+            return success(_row_to_item(row))
     conn.commit()
-    row = conn.execute("SELECT * FROM items WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    row = conn.execute("SELECT * FROM items WHERE id = ?", (new_id,)).fetchone()
     return success(_row_to_item(row))
 
 

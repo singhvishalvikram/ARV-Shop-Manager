@@ -12,9 +12,13 @@ export function getItem(id) {
   return http.get(`/items/${id}`);
 }
 
-/** @param {object} item */
-export function createItem(item) {
-  return http.post('/items', item);
+/**
+ * @param {object} item
+ * @param {{idempotencyKey?: string}} [opts] pass a stable key so a retried/
+ *   replayed create (e.g. offline-queue flush) does not double-insert.
+ */
+export function createItem(item, opts = {}) {
+  return http.post('/items', item, { idempotencyKey: opts.idempotencyKey });
 }
 
 /** @param {number} id @param {object} patch */
