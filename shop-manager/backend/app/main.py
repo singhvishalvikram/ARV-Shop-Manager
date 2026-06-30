@@ -47,6 +47,21 @@ if settings.cors_allow_origins:
 
 
 # ── Security headers on every response (GUARDRAILS §2.8) ──
+# NOTE: 'unsafe-inline' is required while the front-ends use inline <script> and
+# inline event handlers; removing inline code (nonces/external JS) is tracked as
+# future hardening. wa.me links are navigations (not connect-src).
+_CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data: blob:; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "connect-src 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'"
+)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -54,6 +69,7 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
+    response.headers["Content-Security-Policy"] = _CSP
     return response
 
 

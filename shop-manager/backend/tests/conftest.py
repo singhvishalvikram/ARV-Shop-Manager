@@ -12,6 +12,16 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    # The limiter is process-global; clear it so per-test auth calls don't
+    # accumulate across the shared test session.
+    from app.core import rate_limit
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
+
+
 @pytest.fixture()
 def client(monkeypatch):
     tmp_dir = tempfile.mkdtemp()

@@ -3,10 +3,12 @@ and server-side sessions replace the legacy SHA-256 + localStorage PIN."""
 import sqlite3
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
+from app.core.config import settings
 from app.core.envelope import success
 from app.core.errors import AppError, ErrorCode
+from app.core.rate_limit import check_rate_limit, client_ip
 from app.core.security import create_session, hash_password, require_auth, revoke_session, verify_password, _extract_bearer
 from app.db import get_db
 from app.schemas import LoginRequest, SignupRequest
@@ -15,8 +17,17 @@ from fastapi import Header
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _rate_limit(request: Request, action: str) -> None:
+    check_rate_limit(
+        f"{action}:{client_ip(request)}",
+        settings.auth_rate_limit,
+        settings.auth_rate_window_seconds,
+    )
+
+
 @router.post("/signup", status_code=201)
-def signup(payload: SignupRequest, conn: sqlite3.Connection = Depends(get_db)):
+def signup(payload: SignupRequest, request: Request, conn: sqlite3.Connection = Depends(get_db)):
+    _rate_limit(request, "signup")
     existing = conn.execute("SELECT id FROM users WHERE phone = ?", (payload.phone,)).fetchone()
     if existing:
         raise AppError(ErrorCode.CONFLICT, "Phone already registered", status_code=409)
@@ -31,7 +42,8 @@ def signup(payload: SignupRequest, conn: sqlite3.Connection = Depends(get_db)):
 
 
 @router.post("/login")
-def login(payload: LoginRequest, conn: sqlite3.Connection = Depends(get_db)):
+def login(payload: LoginRequest, request: Request, conn: sqlite3.Connection = Depends(get_db)):
+    _rate_limit(request, "login")
     user = conn.execute(
         "SELECT id, phone, name, password_hash, role FROM users WHERE phone = ?", (payload.phone,)
     ).fetchone()

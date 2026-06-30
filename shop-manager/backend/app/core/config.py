@@ -15,6 +15,10 @@ class Settings:
 
     # Sessions / auth
     session_ttl_days: int = int(os.environ.get("SESSION_TTL_DAYS", "30"))
+    # Brute-force protection on auth endpoints: max attempts per client IP per
+    # window. In-memory (single instance); use a shared store (Redis) at scale.
+    auth_rate_limit: int = int(os.environ.get("AUTH_RATE_LIMIT", "5"))
+    auth_rate_window_seconds: int = int(os.environ.get("AUTH_RATE_WINDOW_SECONDS", "900"))
     # CSRF / signing secret — MUST be set in real environments. The empty
     # default is intentional so a missing secret is caught in staging, never
     # silently replaced by a hardcoded one (the bug we are removing).

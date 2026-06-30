@@ -329,7 +329,7 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Standards:** DPDP/privacy (GUARDRAILS data flow), §5 docs.
 - **Exit:** App approved on internal testing track; legal pages live and linked.
 
-### ⬜ Phase 17 — Security Hardening (mobile-facing)
+### ✅ Phase 17 — Security Hardening (mobile-facing)
 - **Goal:** Close client/edge security gaps for paid, multi-tenant use.
 - **Tasks:** CSRF tokens for cookie flows (§4.1.1), CSP + security headers, session
   expiry/refresh, secret hygiene, rate-limit auth (5/15min), DPDP data-handling review,
@@ -337,6 +337,18 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - **Deliverables:** CSRF middleware + client wiring, header config, STRIDE threat model.
 - **Standards:** GUARDRAILS Module 1–2, §4.1 rate limits.
 - **Exit:** Security review checklist passes; SAST/secret scan clean.
+- **✅ Done (2026-06-29):**
+  - **Auth rate-limiting** (`core/rate_limit.py`): per-IP sliding window (5/15min, env-tunable)
+    on login + signup → 429 `RATE_LIMITED`. In-memory now; Redis at scale (call sites stable).
+  - **CSP + tightened headers** on every response (default-src 'self', frame-ancestors 'none',
+    base-uri/form-action 'self', img data:/blob:). `'unsafe-inline'` retained while front-ends
+    use inline handlers (removal tracked).
+  - **CSRF posture documented, not cargo-culted:** the API is **Bearer-only (no ambient
+    cookies)**, so classic CSRF doesn't apply; `require_auth` accepts only the header.
+  - **CI dependency scan** (`pip-audit`, advisory) added; gitleaks already present.
+  - **Threat model + DPDP data-handling doc** (`docs/security/threat-model.md`): PII inventory,
+    STRIDE controls, retention, known gaps (DSR export/delete, HTTPS-at-edge, inline-JS removal).
+  - Tests: `test_security_hardening.py` (rate-limit 429, headers/CSP). **68 passed, ruff clean.**
 
 ### ⬜ Phase 18 — Observability, Push & SLOs
 - **Goal:** Know when mobile breaks; enable engagement.
@@ -412,3 +424,6 @@ one-way from `runtime-config` (settings) so the same build white-labels any shop
 - 2026-06-29 — Phase 11 (partial): catalog products/settings cut over to /api/v1/catalog
   with static-JSON fallback (non-breaking for the live shop); same-origin /catalog serving
   + configurable CORS added. Auth/cart Bearer cutover deferred. 65 passed, ruff clean.
+- 2026-06-29 — Phase 17 DONE: auth rate-limiting (5/15min → 429), CSP + tightened security
+  headers, CI pip-audit (advisory), threat-model/DPDP doc; CSRF posture documented (Bearer-
+  only, no ambient cookies). 68 passed, ruff clean.
