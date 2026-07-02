@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        app:titleTextColor="@color/on_bg" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/screen_padding">
+
+            <ImageView
+                android:id="@+id/image_preview"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:scaleType="centerCrop"
+                android:background="@color/surface_variant"
+                android:contentDescription="@string/take_photo"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button android:id="@+id/btn_camera"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target"
+                    android:text="@string/take_photo" />
+
+                <Button android:id="@+id/btn_gallery"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:minHeight="@dimen/touch_target"
+                    android:text="@string/pick_gallery" />
+            </LinearLayout>
+
+            <EditText android:id="@+id/input_name" style="@style/FormField"
+                android:hint="@string/input_name_hint" android:inputType="text" />
+            <EditText android:id="@+id/input_type" style="@style/FormField"
+                android:hint="@string/input_type_hint" android:inputType="text" />
+            <EditText android:id="@+id/input_price" style="@style/FormField"
+                android:hint="@string/input_price_hint" android:inputType="numberDecimal" />
+            <EditText android:id="@+id/input_quantity" style="@style/FormField"
+                android:hint="@string/input_quantity_hint" android:inputType="number" />
+            <EditText android:id="@+id/input_mrp" style="@style/FormField"
+                android:hint="@string/input_mrp_hint" android:inputType="numberDecimal" />
+            <EditText android:id="@+id/input_cost" style="@style/FormField"
+                android:hint="@string/input_cost_hint" android:inputType="numberDecimal" />
+            <EditText android:id="@+id/input_location" style="@style/FormField"
+                android:hint="@string/input_location_hint" android:inputType="text" />
+            <EditText android:id="@+id/input_description" style="@style/FormField"
+                android:hint="@string/input_description_hint" android:inputType="textMultiLine"
+                android:minLines="2" android:gravity="top" />
+            <EditText android:id="@+id/input_badge" style="@style/FormField"
+                android:hint="@string/input_badge_hint" android:inputType="text" />
+
+            <CheckBox android:id="@+id/check_visible"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
+                android:textColor="@color/on_bg"
+                android:text="@string/check_visible" />
+            <CheckBox android:id="@+id/check_featured"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target"
+                android:textColor="@color/on_bg"
+                android:text="@string/check_featured" />
+
+            <ProgressBar android:id="@+id/save_progress"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:visibility="gone"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btn_save"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/screen_padding"
+        android:minHeight="@dimen/touch_target"
+        android:text="@string/save"
+        android:textSize="16sp" />
+</LinearLayout>

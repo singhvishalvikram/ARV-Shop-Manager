@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_padding">16dp</dimen>
+    <dimen name="card_corner">12dp</dimen>
+    <dimen name="gap">8dp</dimen>
+    <dimen name="touch_target">48dp</dimen>
+</resources>

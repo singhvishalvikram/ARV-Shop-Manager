@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        app:titleTextColor="@color/on_bg"
+        app:subtitleTextColor="@color/on_bg_muted" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="@dimen/screen_padding">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Row 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <LinearLayout style="@style/StatTile" android:layout_marginEnd="@dimen/gap">
+                        <TextView android:id="@+id/stat_total_items" style="@style/StatValue" />
+                        <TextView style="@style/StatLabel" android:text="@string/stat_total_items_label" />
+                    </LinearLayout>
+
+                    <LinearLayout style="@style/StatTile">
+                        <TextView android:id="@+id/stat_today_revenue" style="@style/StatValue" />
+                        <TextView style="@style/StatLabel" android:text="@string/stat_today_revenue_label" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Row 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:layout_marginTop="@dimen/gap">
+
+                    <LinearLayout style="@style/StatTile" android:layout_marginEnd="@dimen/gap">
+                        <TextView android:id="@+id/stat_stock_value" style="@style/StatValue" />
+                        <TextView style="@style/StatLabel" android:text="@string/stat_stock_value_label" />
+                    </LinearLayout>
+
+                    <LinearLayout style="@style/StatTile">
+                        <TextView android:id="@+id/stat_stock_mrp" style="@style/StatValue" />
+                        <TextView style="@style/StatLabel" android:text="@string/stat_stock_mrp_label" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/low_stock_title"
+                    android:textColor="@color/on_bg"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/stat_low_stock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/on_bg_muted"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp" />
+
+                <Button
+                    android:id="@+id/btn_inventory"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/open_inventory" />
+            </LinearLayout>
+        </ScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</LinearLayout>

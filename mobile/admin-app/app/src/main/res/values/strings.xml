@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ARV Manager</string>
+
+    <!-- Login -->
+    <string name="login_title">Shop Owner Login</string>
+    <string name="login_phone_hint">Phone number</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Log in</string>
+    <string name="login_missing_fields">Enter your phone and password</string>
+
+    <!-- Dashboard -->
+    <string name="title_dashboard">Dashboard</string>
+    <string name="stat_total_items_label">Products</string>
+    <string name="stat_today_revenue_label">Today\'s revenue</string>
+    <string name="stat_stock_value_label">Stock value (sell)</string>
+    <string name="stat_stock_mrp_label">Stock value (MRP)</string>
+    <string name="low_stock_title">Low stock</string>
+    <string name="no_low_stock">All items well stocked 👍</string>
+    <string name="open_inventory">Manage Inventory</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_logout">Log out</string>
+
+    <!-- Inventory -->
+    <string name="title_inventory">Inventory</string>
+    <string name="search_hint">Search products…</string>
+    <string name="inventory_empty">No products yet.\nTap + to add your first product.</string>
+    <string name="item_meta">%1$s · %2$s · qty %3$d</string>
+    <string name="add_item">Add product</string>
+    <string name="sell">Sell</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete_confirm_title">Delete product?</string>
+    <string name="delete_confirm_message">Remove \"%1$s\" permanently? This cannot be undone.</string>
+    <string name="item_deleted">Product deleted</string>
+    <string name="pending_sync">%1$d change(s) waiting to sync…</string>
+
+    <!-- Item edit -->
+    <string name="title_add_item">Add Product</string>
+    <string name="title_edit_item">Edit Product</string>
+    <string name="input_name_hint">Product name *</string>
+    <string name="input_type_hint">Category *</string>
+    <string name="input_price_hint">Selling price *</string>
+    <string name="input_quantity_hint">Quantity in stock *</string>
+    <string name="input_description_hint">Description</string>
+    <string name="input_mrp_hint">MRP (optional)</string>
+    <string name="input_cost_hint">Purchase cost (optional)</string>
+    <string name="input_location_hint">Shelf / location (optional)</string>
+    <string name="input_badge_hint">Badge (e.g. New, Sale)</string>
+    <string name="check_visible">Show to customers</string>
+    <string name="check_featured">Feature on storefront</string>
+    <string name="take_photo">Camera</string>
+    <string name="pick_gallery">Gallery</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved</string>
+    <string name="saved_offline">Saved offline — will sync when online</string>
+    <string name="save_failed">Could not prepare the product. Check the fields.</string>
+    <string name="camera_unavailable">Camera not available on this device</string>
+    <string name="image_failed">Could not read that image</string>
+
+    <!-- Sales -->
+    <string name="title_record_sale">Record Sale</string>
+    <string name="sale_item_label">%1$s — in stock: %2$d</string>
+    <string name="sale_qty_hint">Quantity sold</string>
+    <string name="sale_price_hint">Sale price (each)</string>
+    <string name="sale_record">Record sale</string>
+    <string name="sale_recorded">Sale recorded, stock updated</string>
+    <string name="sale_insufficient_stock">Not enough stock for this sale</string>
+    <string name="sale_qty_error">Enter a quantity of 1 or more</string>
+    <string name="sale_price_error">Enter a valid price</string>
+
+    <!-- Settings -->
+    <string name="title_settings">Shop Settings</string>
+    <string name="set_title_hint">Shop name</string>
+    <string name="set_subtitle_hint">Tagline</string>
+    <string name="set_whatsapp_hint">WhatsApp number (with country code)</string>
+    <string name="set_currency_hint">Currency symbol</string>
+    <string name="set_location_hint">Shop location (map link / address)</string>
+    <string name="settings_saved">Settings saved</string>
+</resources>
