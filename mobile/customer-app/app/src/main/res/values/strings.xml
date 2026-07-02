@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Static fallback only: the toolbar title is replaced at runtime by
+         settings.app_title (white-label rule — AGENTS.md). -->
+    <string name="app_name">ARV Shop</string>
+
+    <string name="menu_cart">Cart</string>
+    <string name="menu_cart_count">Cart (%1$d)</string>
+    <string name="title_cart">Your Cart</string>
+    <string name="category_all">All</string>
+    <string name="search_hint">Search products…</string>
+
+    <string name="discount_off">-%1$d%%</string>
+    <string name="out_of_stock">Out of Stock</string>
+    <string name="added_to_cart">Added to cart</string>
+    <string name="add_to_cart">Add to Cart</string>
+
+    <string name="cart_total">Total: %1$s</string>
+    <string name="cart_empty">Your cart is empty.\nBrowse the catalog and add something!</string>
+    <string name="checkout_whatsapp">Order on WhatsApp</string>
+    <string name="cart_remove">Remove item</string>
+    <string name="qty_increase">Increase quantity</string>
+    <string name="qty_decrease">Decrease quantity</string>
+
+    <string name="catalog_updated">Catalog updated</string>
+    <string name="offline_showing_cache">You\'re offline — showing saved catalog</string>
+    <string name="error_no_connection">Couldn\'t load the catalog.\nCheck your connection and try again.</string>
+    <string name="empty_no_matches">No products match your search.</string>
+    <string name="retry">Retry</string>
+    <string name="error_no_whatsapp_number">Shop WhatsApp number is not configured.</string>
+    <string name="error_whatsapp_open_failed">Couldn\'t open WhatsApp on this device.</string>
+    <string name="product_image">Product image</string>
+</resources>

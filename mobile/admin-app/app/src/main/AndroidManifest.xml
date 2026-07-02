@@ -22,10 +22,12 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".ui.auth.SignupActivity" android:exported="false" />
         <activity android:name=".ui.dashboard.DashboardActivity" android:exported="false" />
         <activity android:name=".ui.inventory.InventoryListActivity" android:exported="false" />
         <activity android:name=".ui.item.ItemEditActivity" android:exported="false" />
         <activity android:name=".ui.sales.RecordSaleActivity" android:exported="false" />
+        <activity android:name=".ui.sales.SalesHistoryActivity" android:exported="false" />
         <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
 
         <provider

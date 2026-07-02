@@ -41,8 +41,11 @@ View Manager's curate + publish. Mapping and **live verification**:
 | 11a| Curation on a *new* item | create→follow-up PUT (bug fixed) | POST then PUT | ✅ `visible=0 featured=1 badge=Hot` after chain |
 | 12 | White-label / display settings | `SettingsActivity` | `GET/POST /settings` | ✅ `app_title` round-trips |
 | 13 | Offline resilience (new) | `OfflineQueue` + idempotency key | `POST /items` dedup | ✅ same key → **same id** (no duplicate) |
+| 14 | **Owner onboarding / sign-up** (new) | `SignupActivity` + login link | `POST /auth/signup` | ✅ 201 `{token,user}`; verified on emulator |
+| 15 | **Sales history + total revenue** (was `GET /api/sales`) | `SalesHistoryActivity` | `GET /sales` | ✅ `{sales,total_revenue,count}` |
 
-**Result: 100% of owner-facing web functionality is migrated and verified.**
+**Result: 100% of owner-facing web functionality is migrated and verified.** The two
+audit gaps found in review (no sign-up screen, unused `GET /sales`) are now closed.
 
 ### Deliberately NOT in the admin app (documented, not gaps)
 
@@ -83,21 +86,33 @@ API instead of static JSON with no redesign.
 ## 5. Build & test evidence (this machine, 2026-07-02)
 
 ```
-Backend:   ./ -m pytest        → 75 passed
+Backend:   pytest             → 75 passed
 Admin app: ./gradlew test      → 12 unit tests, 0 failures
                                  (Envelope, Item, DashboardStats, ItemValidator, Money;
                                   fixtures captured from the live /api/v1)
-           ./gradlew assembleDevDebug     → app-dev-debug.apk (6.9 MB)
+           ./gradlew connectedDevDebugAndroidTest → 4 Espresso tests, 0 failures:
+                                 • login screen renders
+                                 • empty-submit shows validation error
+                                 • "create account" navigates to Signup
+                                 • LIVE E2E: login (seeded owner) → dashboard, against
+                                   the real backend on 10.0.2.2:8000  ✅ PASS
+           ./gradlew assembleDevDebug     → app-dev-debug.apk (~6.9 MB)
            ./gradlew assembleProdRelease  → SIGNED app-prod-release.apk (1.75 MB, R8-minified)
            apksigner verify               → Signer #1 present (CN=ARV Enterprises)
 Live API verification (curl): login, 401-guard, items CRUD, sale, 409 oversell,
            curation PUT, create→PUT merchandising chain, settings, delete, idempotency
            — all pass with the exact shapes/codes the app parses.
+Emulator run: login & signup screens confirmed visually; login→dashboard E2E automated.
 ```
 
-### Not yet done (next phase, explicitly)
-- **Espresso instrumented test** (login→add→sale) on an emulator — requires an AVD;
-  the JVM unit tests + live-API `curl` cover the logic and contract in the meantime.
-- CI workflow enable, AAB, Play listing, privacy policy (customer app doc lists these).
-- Fresh production keystore (current dev keystore at `~/.arv-keystore/` is for local
-  signing only — must be rotated before Play Store, per pipeline_ops).
+### Demo credentials (seeded in the default `shop.db`)
+```
+Phone: 9999999999   Password: owner1234   (+ 4 demo products)
+```
+Or use the in-app **Create Shop Account** screen. See `admin-app/README.md`.
+
+### Not yet done (next phase — see PRODUCT-ROADMAP.md)
+- Expand Espresso (add-item, record-sale, offline flows) + device-farm matrix.
+- CI workflow enable, AAB, Play listing, privacy/data-safety declarations.
+- Fresh production keystore (current dev keystore at `~/.arv-keystore/` is local-only —
+  rotate before Play Store, per pipeline_ops).

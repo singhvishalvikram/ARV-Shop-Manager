@@ -1,0 +1,7 @@
+[
+  {"id": 54, "name": "AKARI Led Torch", "type": "Electronics", "description": "Rechargable led torch with tail led. Type C charger included", "price": 325.0, "mrp": 390.0, "discount_percent": 17, "image_url": "/images/item_54_1780731939.128437.jpg", "featured": 0, "badge": "Jhg", "sort_order": 0},
+  {"id": 55, "name": "Featured Fan", "type": "Electronics", "description": "Table fan", "price": 1200.0, "mrp": 1200.0, "discount_percent": 0, "image_url": "/images/item_55.jpg", "featured": 1, "badge": "", "sort_order": 2},
+  {"id": 56, "name": "Sold Out Kettle", "type": "Kitchen", "description": "Electric kettle", "price": 850.5, "mrp": 999.0, "discount_percent": 15, "image_url": "/images/item_56.jpg", "featured": 0, "badge": "", "sort_order": 1, "stock_status": "out_of_stock"},
+  {"name": "MALFORMED — no id or price"},
+  {"id": 57, "name": "  ", "price": 10.0}
+]

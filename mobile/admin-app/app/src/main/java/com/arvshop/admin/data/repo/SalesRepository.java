@@ -1,18 +1,23 @@
 package com.arvshop.admin.data.repo;
 
+import com.arvshop.admin.data.model.SalesHistory;
 import com.arvshop.admin.data.remote.ApiClient;
 import com.arvshop.admin.data.remote.ApiException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/** POST /api/v1/sales — records a sale; server decrements stock atomically. */
+/** /api/v1/sales — record a sale (server decrements stock) and list history. */
 public class SalesRepository {
 
     private final ApiClient api;
 
     public SalesRepository(ApiClient api) {
         this.api = api;
+    }
+
+    public SalesHistory list() throws ApiException {
+        return SalesHistory.fromJson(api.getObject("/api/v1/sales"));
     }
 
     /**

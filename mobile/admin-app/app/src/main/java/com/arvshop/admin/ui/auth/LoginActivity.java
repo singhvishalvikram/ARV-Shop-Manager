@@ -42,6 +42,8 @@ public class LoginActivity extends AppCompatActivity {
         errorText = findViewById(R.id.login_error);
 
         loginButton.setOnClickListener(v -> attemptLogin());
+        findViewById(R.id.go_to_signup).setOnClickListener(v ->
+                startActivity(new Intent(this, SignupActivity.class)));
 
         viewModel.loginState().observe(this, result -> {
             if (result == null) return;

@@ -8,6 +8,25 @@
     <string name="login_password_hint">Password</string>
     <string name="login_button">Log in</string>
     <string name="login_missing_fields">Enter your phone and password</string>
+    <string name="login_create_account">New here? Create a shop account</string>
+
+    <!-- Signup -->
+    <string name="signup_title">Create Shop Account</string>
+    <string name="signup_intro">Create your owner account to manage inventory, sales, and your storefront.</string>
+    <string name="signup_name_hint">Your name / shop name</string>
+    <string name="signup_phone_hint">Phone number</string>
+    <string name="signup_password_hint">Password (min 8 characters)</string>
+    <string name="signup_button">Create account</string>
+    <string name="signup_phone_invalid">Enter a valid phone number</string>
+    <string name="signup_password_short">Password must be at least 8 characters</string>
+
+    <!-- Sales history -->
+    <string name="title_sales_history">Sales History</string>
+    <string name="open_sales_history">View Sales History</string>
+    <string name="sales_summary">%1$d sales · %2$s total revenue</string>
+    <string name="sales_row_meta">Qty %1$d × %2$s · %3$s</string>
+    <string name="sales_empty">No sales recorded yet.</string>
+    <string name="sale_unknown_item">(deleted product)</string>
 
     <!-- Dashboard -->
     <string name="title_dashboard">Dashboard</string>

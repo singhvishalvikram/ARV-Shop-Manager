@@ -49,6 +49,9 @@ public class DashboardActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_inventory).setOnClickListener(v ->
                 startActivity(new Intent(this, InventoryListActivity.class)));
+        findViewById(R.id.btn_sales_history).setOnClickListener(v ->
+                startActivity(new Intent(this,
+                        com.arvshop.admin.ui.sales.SalesHistoryActivity.class)));
 
         viewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         swipeRefresh.setOnRefreshListener(viewModel::load);
