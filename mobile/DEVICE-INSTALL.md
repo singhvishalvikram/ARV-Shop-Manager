@@ -46,16 +46,26 @@ will and won't work:
 | You built with… | Works on emulator? | Works on a real phone? |
 |---|---|---|
 | **default `dev`** → `http://10.0.2.2:8000` | ✅ (that's the emulator's alias for your PC) | ❌ `10.0.2.2` is meaningless on a real phone |
-| **`dev` + `-PapiBaseUrl=http://<PC-LAN-IP>:8000`** | ✅ | ✅ **only while on the same Wi-Fi** as the PC running the backend |
+| **`dev` + `-PapiBaseUrl=http://<PC-LAN-IP>:8000`** | ✅ | ❌ **blocked by design** — see note below |
+| **`dev` + `-PapiBaseUrl=http://127.0.0.1:8000`, phone on USB + `adb reverse`** | n/a | ✅ **while the cable is connected** — see [`BUILD-AND-SHARE.md`](BUILD-AND-SHARE.md) |
 | **`prod` + `-PapiBaseUrl=https://<your-domain>`** | ✅ | ✅ **anywhere** (this is the real, sellable build) |
 
-> The `dev` flavor allows plaintext HTTP (`ALLOW_CLEARTEXT=true`) for LAN testing only.
-> The `prod` flavor is **HTTPS-only** (`usesCleartextTraffic=false`) — it will refuse a
-> plain-HTTP URL. That is deliberate: real customer data must travel over TLS.
+> **Correction (verified 2026-07-02):** an earlier version of this doc claimed a LAN-IP HTTP
+> build would work on a real phone over shared Wi-Fi. That's **wrong** — `app/src/main/res/
+> xml/network_security_config.xml` only whitelists cleartext to `10.0.2.2` / `localhost` /
+> `127.0.0.1`. An arbitrary LAN IP (e.g. `192.168.1.5`) is **not** on that list, so Android
+> blocks the plaintext request outright regardless of the `ALLOW_CLEARTEXT` build flag. This
+> is intentional (GUARDRAILS 1.3) — we did not widen it to an arbitrary IP, since that would
+> mean committing a security-config change scoped to one person's home network. The
+> supported ways to run the admin app against a real backend are: **(a)** USB + `adb reverse`
+> to the already-whitelisted loopback address (no security-file change, see
+> [`BUILD-AND-SHARE.md`](BUILD-AND-SHARE.md)), or **(b)** deploy the backend behind HTTPS and
+> build `prod` (works from anywhere, no cable).
 
 **The APK you were running was almost certainly the default `dev` build → `10.0.2.2:8000`,
-which is why it works in the emulator but cannot log in on your physical phone.** To use it
-on your phone, rebuild with a URL your phone can actually reach (next section).
+which is why it works in the emulator but cannot log in on your physical phone.** See
+[`BUILD-AND-SHARE.md`](BUILD-AND-SHARE.md) for the exact commands used to build a real,
+installable pair of APKs and get the admin app talking to a real backend today.
 
 ---
 
@@ -66,11 +76,14 @@ Google Play is not involved yet, so you install the `.apk` file directly:
 1. **Build a phone-appropriate APK** (see §2.2 for the admin app):
    ```bash
    cd mobile/admin-app
-   # Same-Wi-Fi LAN test build (replace with your PC's IP, e.g. 192.168.1.5):
-   ./gradlew assembleDevDebug -PapiBaseUrl="http://192.168.1.5:8000"
+   # USB + adb-reverse build (loopback is already cleartext-whitelisted, no security-file
+   # change needed) — see BUILD-AND-SHARE.md for the full adb reverse steps:
+   ./gradlew assembleDevDebug -PapiBaseUrl="http://127.0.0.1:8000"
    #   → app/build/outputs/apk/dev/debug/app-dev-debug.apk
    ```
-   For the customer app: `cd mobile/customer-app && ./gradlew assembleProdRelease`.
+   For the customer app: `cd mobile/customer-app && ./gradlew assembleProdRelease` (needs the
+   release keystore) or `assembleProdDebug` (debug-signed, no keystore password needed —
+   fine for sideloading to your own phone).
 
 2. **Get the APK onto the phone** — USB cable + `adb install <path>.apk`, or upload it to
    Drive/WhatsApp-to-self and download it on the phone.

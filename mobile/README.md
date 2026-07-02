@@ -25,6 +25,7 @@ static JSON with no redesign.
 | Doc | What it covers |
 |---|---|
 | [`DEVICE-INSTALL.md`](DEVICE-INSTALL.md) | **Will the APK run on my phone?** Android versions, sideloading, why the admin app needs a backend URL |
+| [`BUILD-AND-SHARE.md`](BUILD-AND-SHARE.md) | **What was actually built, exact paths, USB/adb-reverse install steps, what "shareable" requires per audience** |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) | **Deploy the backend + build/ship APKs** that run on any phone; release signing & Play path |
 | [`NEXT-STEPS.md`](NEXT-STEPS.md) | Short, prioritized "what to do next" sequence (the roadmap distilled) |
 | [`ADMIN-APP-BLUEPRINT.md`](ADMIN-APP-BLUEPRINT.md) | Admin app: Discovery→PRD→RFC→20-phase plan, verified API contract |
