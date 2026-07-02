@@ -36,6 +36,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 
+# Host-header validation only when explicitly configured (public deployments).
+# Default (unset) is unrestricted, so local dev/tests are unaffected.
+if settings.allowed_hosts:
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+
 # CORS only when the catalog is hosted cross-origin (configured via env). The
 # default is same-origin, so no cross-origin access is granted unless asked for.
 if settings.cors_allow_origins:

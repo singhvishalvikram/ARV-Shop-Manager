@@ -4,6 +4,7 @@ Replaces the legacy Node "write a Python file to /tmp and shell out per
 query" anti-pattern (server.js) entirely. Standards: GUARDRAILS §2.2
 (Injection Prevention), CODING_STANDARDS §4.4 (DB Efficiency).
 """
+import os
 import sqlite3
 from collections.abc import Iterator
 
@@ -11,6 +12,11 @@ from app.core.config import settings
 
 
 def get_connection() -> sqlite3.Connection:
+    # A fresh deploy points SHOP_DB_PATH at a persistent volume (e.g. /data/shop.db)
+    # whose parent directory may not exist yet — sqlite3.connect does not create it.
+    db_dir = os.path.dirname(settings.db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     conn = sqlite3.connect(settings.db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")

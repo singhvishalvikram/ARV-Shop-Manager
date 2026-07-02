@@ -61,9 +61,15 @@ Now the API base URL for the apps is `https://api.yourshop.com`.
 
 | Stage | How | Reachable from |
 |---|---|---|
-| **Local LAN test** | run uvicorn on your PC; find your IP (`ipconfig`/`ifconfig`) | phones on the **same Wi-Fi** only, over `http://<PC-IP>:8000` |
-| **First real shop** | one small VPS/container (Railway, Render, Fly.io, a $5 VM) + Caddy TLS + a domain | **anywhere**, over `https://` |
+| **Local test** | USB + `adb reverse` to `127.0.0.1:8000` (no LAN exposure) — see `BUILD-AND-SHARE.md` | your own phone, cabled to your Mac |
+| **Free, long-lived, no domain** | **Oracle Cloud Always Free VM + sslip.io + Caddy** — see [`../docs/operator/05-free-server-deployment.md`](../docs/operator/05-free-server-deployment.md) and the ready-to-run `shop-manager/backend/ops/provision.sh` | **anywhere**, over `https://`, $0/month indefinitely |
+| **First real shop, own domain** | one small VPS/container (or the same free VM) + Caddy TLS + a purchased domain | **anywhere**, over `https://` |
 | **Scale (later)** | container + managed Postgres + object storage + Redis rate-limit (see PRODUCT-ROADMAP §1.A/1.F) | anywhere, multi-shop |
+
+> A LAN-IP HTTP build (`http://192.168.x.x:8000`) does **not** work on a real phone — the
+> app's `network_security_config.xml` only whitelists cleartext to `10.0.2.2`/`localhost`/
+> `127.0.0.1`, by design (GUARDRAILS 1.3). Use USB+adb-reverse for local testing, or deploy
+> behind HTTPS for anywhere-access — never widen that whitelist to an arbitrary IP.
 
 ### 1.5 Seed / verify
 ```bash

@@ -15,6 +15,9 @@ Read in order:
    both faces, images, DB, catalog hosting).
 4. **[04-action-items.md](04-action-items.md)** — the consolidated checklist: what blocks
    what, and the order to do it.
+5. **[05-free-server-deployment.md](05-free-server-deployment.md)** — concrete, no-cost
+   path: Oracle Cloud Always Free + sslip.io + Caddy, using the provisioning script at
+   `../../shop-manager/backend/ops/provision.sh`. Do this if you don't have a server yet.
 
 Reference: [`../mobile-roadmap.md`](../mobile-roadmap.md) (phase status),
 [`../security/threat-model.md`](../security/threat-model.md),

@@ -1,0 +1,8 @@
+# Reverse proxy: terminates real HTTPS (Let's Encrypt, auto-renewed) and
+# forwards to the backend, which only listens on loopback (see the systemd
+# unit). Replace YOUR-HOSTNAME-HERE with your sslip.io hostname (see
+# ../../../docs/operator/05-free-server-deployment.md) or your own domain.
+YOUR-HOSTNAME-HERE {
+	reverse_proxy 127.0.0.1:8000
+	encode gzip
+}

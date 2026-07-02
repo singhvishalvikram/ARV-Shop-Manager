@@ -1,0 +1,22 @@
+[Unit]
+Description=ARV Shop Manager backend (FastAPI/uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=arvapp
+Group=arvapp
+WorkingDirectory=/opt/arv-shop-manager/shop-manager/backend
+EnvironmentFile=/etc/arv-backend.env
+# Bind to loopback only — Caddy is the sole public listener (443), reverse
+# proxying to this port. Never expose uvicorn directly to the internet.
+ExecStart=/opt/arv-shop-manager/shop-manager/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

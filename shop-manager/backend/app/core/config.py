@@ -24,6 +24,13 @@ class Settings:
     # silently replaced by a hardcoded one (the bug we are removing).
     auth_secret: str = os.environ.get("AUTH_SECRET", "")
 
+    # Host-header allow-list (DNS-rebinding / cache-poisoning protection) for
+    # public deployments. Empty = no restriction (local dev, tests). Set to the
+    # real hostname(s) once behind a domain, e.g. api-1-2-3-4.sslip.io.
+    allowed_hosts: list = [
+        h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()
+    ]
+
     # API
     api_prefix: str = "/api/v1"
     # White-label: no tenant brand baked in (per-shop name comes from settings).
