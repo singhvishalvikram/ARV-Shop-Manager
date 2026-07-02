@@ -1,0 +1,39 @@
+# Phase 19 — Android CI (placeholder, manual-trigger only).
+# Deliberately `workflow_dispatch` only: this repo has no CI today and AGENTS.md
+# requires human approval before automated pipelines act. Switch `on:` to
+# push/pull_request paths ['mobile/**'] once the team approves.
+name: android-ci
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/customer-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Generate Gradle wrapper (first run only — wrapper jar not committed yet)
+        run: gradle wrapper --gradle-version 8.7
+
+      - name: Unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDevDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-app-dev-debug
+          path: mobile/customer-app/app/build/outputs/apk/dev/debug/*.apk
+          retention-days: 14
