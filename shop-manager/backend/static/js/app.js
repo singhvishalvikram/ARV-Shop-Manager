@@ -6,7 +6,6 @@ let appState = {
     capturedImageBase64: null,
     isOnline: navigator.onLine,
     currentTab: 'dashboard',
-    currentItemPin: '',
     selectedSaleItem: null,
     searchTimeout: null,
     editCameraStream: null,
@@ -14,115 +13,88 @@ let appState = {
     editImageRemoved: false
 };
 
-// ========== LOCK SCREEN ==========
-const DEFAULT_PIN = '1234';
-const PIN_KEY = 'shop_manager_pin';
+// ========== AUTH / LOGIN ==========
+// Server-side authentication via the shared service layer (window.Auth, set by
+// api-globals.js). Replaces the old client-side PIN, which was no real gate.
 
-function getStoredPin() {
-    return localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
-}
-
-function setStoredPin(pin) {
-    localStorage.setItem(PIN_KEY, pin);
-}
-
-function enterPin(digit) {
-    if (appState.currentItemPin.length >= 4) return;
-    appState.currentItemPin += digit.toString();
-    updatePinDisplay();
-    if (appState.currentItemPin.length === 4) {
-        setTimeout(checkPin, 150);
-    }
-}
-
-function clearPin() {
-    appState.currentItemPin = '';
-    updatePinDisplay();
-    document.getElementById('lockError').textContent = '';
-}
-
-function backspacePin() {
-    appState.currentItemPin = appState.currentItemPin.slice(0, -1);
-    updatePinDisplay();
-}
-
-function updatePinDisplay() {
-    for (let i = 1; i <= 4; i++) {
-        const dot = document.getElementById('dot' + i);
-        if (dot) {
-            dot.classList.toggle('filled', i <= appState.currentItemPin.length);
-        }
-    }
-}
-
-function checkPin() {
-    if (appState.currentItemPin === getStoredPin()) {
-        // Success
-        document.getElementById('lockScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        appState.currentItemPin = '';
-        updatePinDisplay();
-        // Load data immediately after unlock so inventory is never empty
-        loadInitialData();
-    } else {
-        // Fail
-        const errEl = document.getElementById('lockError');
-        errEl.textContent = 'Wrong PIN. Try again.';
-        appState.currentItemPin = '';
-        updatePinDisplay();
-    }
-}
-
-function lockApp(e) {
-    if (e) e.preventDefault();
-    closeDrawer();
+function showLoginScreen() {
     document.getElementById('mainApp').style.display = 'none';
     document.getElementById('lockScreen').style.display = 'flex';
-    appState.currentItemPin = '';
-    updatePinDisplay();
+}
+
+function showApp() {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+}
+
+async function doLogin(e) {
+    if (e) e.preventDefault();
+    const errEl = document.getElementById('lockError');
+    const btn = document.getElementById('loginSubmitBtn');
+    const phone = document.getElementById('loginPhone').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    errEl.textContent = '';
+
+    if (!phone || !password) {
+        errEl.textContent = 'Enter your phone and password.';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+        if (window.__authMode === 'signup') {
+            await window.Auth.signup({ phone, password, name: '' });
+        } else {
+            await window.Auth.login({ phone, password });
+        }
+        showApp();
+        await loadInitialData();
+    } catch (err) {
+        errEl.textContent = (err && err.code === 'UNAUTHORIZED')
+            ? 'Invalid phone or password.'
+            : (err && err.message) || 'Sign-in failed. Try again.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = window.__authMode === 'signup' ? 'Create account' : 'Sign In';
+    }
+}
+
+function startGoogleLogin() {
+    window.location.href = window.Auth.googleLoginUrl();
+}
+
+function toggleSignup(e) {
+    if (e) e.preventDefault();
+    window.__authMode = window.__authMode === 'signup' ? 'login' : 'signup';
+    const isSignup = window.__authMode === 'signup';
+    document.getElementById('loginSubmitBtn').textContent = isSignup ? 'Create account' : 'Sign In';
+    document.querySelector('#lockScreen .lock-subtitle').textContent =
+        isSignup ? 'Create an owner account' : 'Sign in to continue';
     document.getElementById('lockError').textContent = '';
 }
 
-function showSetPin() {
-    document.getElementById('setPinModal').style.display = 'flex';
-    document.getElementById('setPinCurrent').value = '';
-    document.getElementById('setPinNew').value = '';
-    document.getElementById('setPinConfirm').value = '';
-    document.getElementById('setPinError').textContent = '';
+async function logout(e) {
+    if (e) e.preventDefault();
+    closeDrawer();
+    try { await window.Auth.logout(); } catch (err) { /* token cleared regardless */ }
+    showLoginScreen();
 }
 
-function closeSetPinModal() {
-    document.getElementById('setPinModal').style.display = 'none';
-}
-
-function doSetPin() {
-    const current = document.getElementById('setPinCurrent').value;
-    const newPin = document.getElementById('setPinNew').value;
-    const confirm = document.getElementById('setPinConfirm').value;
-    const errEl = document.getElementById('setPinError');
-
-    if (current !== getStoredPin()) {
-        errEl.textContent = 'Current PIN is incorrect';
-        return;
+/** True if a stored session token is still valid (server-checked). */
+async function hasValidSession() {
+    if (!window.Auth || !window.Auth.getToken()) return false;
+    try {
+        await window.Auth.me();
+        return true;
+    } catch (err) {
+        return false;
     }
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-        errEl.textContent = 'New PIN must be exactly 4 digits';
-        return;
-    }
-    if (newPin !== confirm) {
-        errEl.textContent = 'New PIN and confirmation do not match';
-        return;
-    }
-
-    setStoredPin(newPin);
-    closeSetPinModal();
-    alert('PIN changed successfully!');
 }
 
 // ========== APP INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 App initializing...');
-    
+
     // Initialize IndexedDB first
     try {
         await LocalDB.openDB();
@@ -130,22 +102,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
         console.error('IndexedDB init failed:', err);
     }
-    
+
     setupEventListeners();
     setupOnlineOfflineListeners();
     checkOnlineStatus();
 
-    // Always load data on page load
-    // If lock screen is showing, loadInitialData runs after successful checkPin() instead
-    if (document.getElementById('lockScreen').style.display !== 'flex') {
+    // Apply white-label branding from shop settings (public; works pre-login).
+    try { await window.Branding.loadBranding(); } catch (e) { /* defaults stand */ }
+
+    // Gate on a real server session. A Google redirect token (if any) was already
+    // captured by api-globals.js before this ran.
+    if (await hasValidSession()) {
+        showApp();
         await loadInitialData();
     } else {
-        // Lock screen is showing — still preload from IndexedDB so it's ready when user unlocks
-        // checkPin() success will also call loadInitialData() to sync with server
+        showLoginScreen();
+        // Preload local cache so the app is ready the moment sign-in succeeds.
         try {
             await LocalDB.getLocalItems();
             await LocalDB.getLocalSales();
-            console.log('📦 Preloaded local data while locked');
         } catch (e) {
             console.warn('Preload failed:', e);
         }
@@ -155,15 +130,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadInitialData() {
     // Always fetch from server first — server is the source of truth
     try {
-        const res = await fetch('/api/items');
-        if (res.ok) {
-            const data = await res.json();
-            const serverItems = data.items || data;
-            appState.items = serverItems;
-            renderItems(appState.items);
-            // Save to IndexedDB as cache (don't block on it)
-            syncServerItemsToLocal(serverItems).catch(() => {});
-        }
+        const serverItems = await window.API.items.listItems();
+        appState.items = serverItems;
+        renderItems(appState.items);
+        // Save to IndexedDB as cache (don't block on it)
+        syncServerItemsToLocal(serverItems).catch(() => {});
     } catch (error) {
         // Server unreachable — fallback to IndexedDB
         console.error('Server fetch failed, using local:', error);
@@ -172,12 +143,8 @@ async function loadInitialData() {
 
     // Load sales
     try {
-        const saleRes = await fetch('/api/sales');
-        if (saleRes.ok) {
-            const saleData = await saleRes.json();
-            appState.sales = saleData.sales || saleData;
-            renderSales(appState.sales);
-        }
+        appState.sales = await window.API.sales.listSales();
+        renderSales(appState.sales);
     } catch (e) {
         await loadSalesFromLocal();
     }
@@ -187,6 +154,11 @@ async function loadInitialData() {
 
 // Setup event listeners
 function setupEventListeners() {
+    // Login screen
+    document.getElementById('loginForm')?.addEventListener('submit', doLogin);
+    document.getElementById('googleLoginBtn')?.addEventListener('click', startGoogleLogin);
+    document.getElementById('showSignupLink')?.addEventListener('click', toggleSignup);
+
     // Search functionality
     document.getElementById('searchInput')?.addEventListener('input', (e) => {
         filterItems(e.target.value);
@@ -312,10 +284,7 @@ function switchTab(tabName) {
 async function loadDashboard() {
     // Try server first for latest data
     try {
-        const res = await fetch('/api/dashboard');
-        if (!res.ok) throw new Error('Dashboard fetch failed');
-
-        const data = await res.json();
+        const data = await window.API.dashboard.getDashboard();
         renderDashboard(data);
         saveToCache('dashboard', data);
     } catch (error) {
@@ -364,12 +333,9 @@ function renderDashboard(data) {
 
 // ========== ITEMS MANAGEMENT ==========
 async function loadItems() {
-    // Server load (original, for backward compat)
+    // Server load (source of truth), with IndexedDB fallback when offline.
     try {
-        const res = await fetch('/api/items');
-        if (!res.ok) throw new Error('Items fetch failed');
-        const data = await res.json();
-        appState.items = data.items || data;
+        appState.items = await window.API.items.listItems();
         renderItems(appState.items);
         saveToCache('items', appState.items);
         // Also sync to IndexedDB
@@ -435,12 +401,9 @@ async function syncServerItemsToLocal(serverItems) {
 async function syncWithServer() {
     // Fetch from server and update local DB
     try {
-        const res = await fetch('/api/items');
-        if (!res.ok) throw new Error('Items fetch failed');
-        const data = await res.json();
-        const serverItems = data.items || data;
+        const serverItems = await window.API.items.listItems();
         await syncServerItemsToLocal(serverItems);
-        
+
         // Refresh display
         await loadItemsFromLocal();
         await loadDashboardFromLocal();
@@ -828,24 +791,14 @@ async function saveEditItem(e) {
     // If neither removed nor new capture, backend keeps existing image_url
 
     try {
-        const res = await fetch(`/api/items/${itemId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        if (res.ok) {
-            alert('✓ Item updated successfully!');
-            closeEditModal();
-            await loadItems();
-            await loadDashboard();
-        } else {
-            const err = await res.json();
-            alert('Error: ' + (err.error || 'Failed to update item'));
-        }
+        await window.API.items.updateItem(itemId, data);
+        alert('✓ Item updated successfully!');
+        closeEditModal();
+        await loadItems();
+        await loadDashboard();
     } catch (error) {
         console.error('Edit error:', error);
-        alert('Error: ' + error.message);
+        alert('Error: ' + (error.message || 'Failed to update item'));
     }
 }
 
@@ -890,35 +843,25 @@ async function addItem(e) {
     };
 
     try {
-        const res = await fetch('/api/items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
+        await window.API.items.createItem(data);
+        alert('✓ Item added successfully!');
+        document.getElementById('itemForm').reset();
+        document.getElementById('imageBase64').value = '';
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('cameraPreview').style.display = 'block';
+        document.getElementById('startCameraBtn').style.display = 'block';
+        appState.capturedImageBase64 = null;
 
-        if (res.ok) {
-            alert('✓ Item added successfully!');
-            document.getElementById('itemForm').reset();
-            document.getElementById('imageBase64').value = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('cameraPreview').style.display = 'block';
-            document.getElementById('startCameraBtn').style.display = 'block';
-            appState.capturedImageBase64 = null;
-
-            await loadItems();
-            await loadDashboard();
-            switchTab('items');
-        } else {
-            const err = await res.json();
-            alert('Error: ' + (err.error || 'Failed to add item'));
-        }
+        await loadItems();
+        await loadDashboard();
+        switchTab('items');
     } catch (error) {
         console.error('Add item error:', error);
         if (!appState.isOnline) {
             saveOfflineAction('addItem', data);
             alert('Offline: Item will be added when online');
         } else {
-            alert('Error: ' + error.message);
+            alert('Error: ' + (error.message || 'Failed to add item'));
         }
     }
 }
@@ -928,26 +871,21 @@ async function deleteItem(itemId) {
     if (!confirm('Delete this item?')) return;
 
     try {
-        const res = await fetch(`/api/items/${itemId}`, { method: 'DELETE' });
-        if (res.ok) {
-            alert('Item deleted');
-            closeItemModal();
-            await loadItems();
-            await loadDashboard();
-        }
+        await window.API.items.deleteItem(itemId);
+        alert('Item deleted');
+        closeItemModal();
+        await loadItems();
+        await loadDashboard();
     } catch (error) {
         console.error('Delete error:', error);
+        alert('Error: ' + (error.message || 'Failed to delete item'));
     }
 }
 
 // ========== SALES MANAGEMENT ==========
 async function loadSales() {
     try {
-        const res = await fetch('/api/sales');
-        if (!res.ok) throw new Error('Sales fetch failed');
-
-        const data = await res.json();
-        appState.sales = data.sales || data;
+        appState.sales = await window.API.sales.listSales();
         renderSales(appState.sales);
         saveToCache('sales', appState.sales);
     } catch (error) {
@@ -1103,33 +1041,29 @@ async function recordSale() {
     }
 
     try {
-        const res = await fetch('/api/sales', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                item_id: parseInt(itemId),
-                quantity: quantity,
-                price: price,
-                description: notes
-            })
+        await window.API.sales.createSale({
+            item_id: parseInt(itemId),
+            quantity: quantity,
+            price: price,
+            description: notes
         });
-
-        if (res.ok) {
-            alert('✓ Sale recorded!');
-            document.getElementById('saleQuantity').value = '1';
-            document.getElementById('salePrice').value = '';
-            document.getElementById('saleNotes').value = '';
-            clearSaleSelection();
-            await loadSales();
-            await loadItems();
-            await loadDashboard();
-        } else {
-            const err = await res.json();
-            alert('Error: ' + (err.error || 'Failed to record sale'));
-        }
+        alert('✓ Sale recorded!');
+        document.getElementById('saleQuantity').value = '1';
+        document.getElementById('salePrice').value = '';
+        document.getElementById('saleNotes').value = '';
+        clearSaleSelection();
+        await loadSales();
+        await loadItems();
+        await loadDashboard();
     } catch (error) {
         console.error('Sale error:', error);
-        alert('Error: ' + error.message);
+        // The API rejects oversell with a 409 INSUFFICIENT_STOCK envelope.
+        if (error && error.code === 'INSUFFICIENT_STOCK') {
+            const avail = error.details && error.details.available;
+            alert('Not enough stock' + (avail != null ? `. Available: ${avail}` : '') + '.');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to record sale'));
+        }
     }
 }
 
@@ -1229,10 +1163,16 @@ function loadFromCache(key) {
     }
 }
 
+function newIdempotencyKey() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'idem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+}
+
 function saveOfflineAction(action, data) {
     try {
         const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
-        actions.push({ action, data, timestamp: Date.now() });
+        // Stable key per queued action so replay on reconnect can't double-post.
+        actions.push({ action, data, key: newIdempotencyKey(), timestamp: Date.now() });
         localStorage.setItem('offlineActions', JSON.stringify(actions));
     } catch (e) {
         console.warn('Could not save offline action');
@@ -1244,11 +1184,7 @@ async function syncOfflineData() {
         const actions = JSON.parse(localStorage.getItem('offlineActions') || '[]');
         for (const action of actions) {
             if (action.action === 'addItem') {
-                await fetch('/api/items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(action.data)
-                });
+                await window.API.items.createItem(action.data, { idempotencyKey: action.key });
             }
         }
         localStorage.removeItem('offlineActions');

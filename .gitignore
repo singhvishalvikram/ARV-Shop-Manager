@@ -1,27 +1,57 @@
-# Python
+# ─── Python ───────────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ─── Node ─────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ─── Databases (generated; never commit) ──────────────────
 *.db
+*.db-wal
+*.db-shm
+*.sqlite
 *.sqlite3
 
-# Node
-node_modules/
-npm-debug.log
+# ─── Secrets & environment ────────────────────────────────
+.env
+.env.*
+!.env.example
+*.drive_config.json
 
-# IDE
-.vscode/
-.idea/
+# ─── Generated databases (the served JSON in */data/ is a deployment
+#     artifact and MUST stay tracked, so only the DB dir is ignored) ──
+customer-view/db/
+
+# ─── Editor / OS backups & cruft ──────────────────────────
+*.bak
+*.bak[0-9]
+*.backup
+*.backup[0-9]
+*.orig
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Backups
-backups/
+# ─── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
 
-# Environment
-.env
-*.db
+# ─── Runtime item-image uploads (served data, not source) ──
+# New uploads (item_<hex>.<ext>) are runtime artifacts. Already-tracked legacy
+# images stay tracked (the catalog may reference them); only new files here are
+# ignored. Object storage will remove this concern entirely (CLAUDE.md §4).
+shop-manager/backend/static/images/items/*
+!shop-manager/backend/static/images/items/.gitkeep
+
+# ─── Misc ─────────────────────────────────────────────────
+backups/
+/tmp/

@@ -1,5 +1,11 @@
 # Shop Manager - Enhanced with Camera & Offline Support
 
+> **⚠️ Backend has moved to FastAPI.** The backend is now the consolidated FastAPI service
+> in [`backend/app/`](backend/app/) (run with `uvicorn app.main:app`, API under `/api/v1`).
+> The legacy Flask `backend/app.py` is pending removal. See [`backend/app/README.md`](backend/app/README.md)
+> and the repo [`README.md`](../README.md) / [`CLAUDE.md`](../CLAUDE.md). The camera / offline /
+> PWA notes below describe the **frontend**, which remains valid.
+
 ## Overview
 The Shop Manager application has been upgraded with camera integration, image processing, offline functionality, and Progressive Web App (PWA) capabilities.
 

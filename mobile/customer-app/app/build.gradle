@@ -1,0 +1,90 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.arvshop.customer'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.arvshop.customer"
+        minSdk 24          // covers low-cost Indian Android handsets (Android 7+)
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // Phase 17 — flavors carry the catalog base URL. Overridable per-build:
+    //   ./gradlew assembleDevDebug -PcatalogBaseUrl="http://10.0.2.2:3000"
+    flavorDimensions = ["env"]
+    productFlavors {
+        dev {
+            dimension "env"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            buildConfigField "String", "CATALOG_BASE_URL",
+                    "\"" + (project.findProperty("catalogBaseUrl") ?: "https://singhvishalvikram.github.io/Cinema123BW") + "\""
+        }
+        prod {
+            dimension "env"
+            buildConfigField "String", "CATALOG_BASE_URL",
+                    "\"https://singhvishalvikram.github.io/Cinema123BW\""
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Phase 18 — signing config is injected from ~/.gradle/gradle.properties
+            // (ARV_KEYSTORE_PATH / ARV_KEYSTORE_PASS / ARV_KEY_ALIAS / ARV_KEY_PASS).
+            // Unsigned release builds still work for verification.
+            if (project.hasProperty("ARV_KEYSTORE_PATH")) {
+                signingConfigs {
+                    releaseSigning {
+                        storeFile file(project.property("ARV_KEYSTORE_PATH"))
+                        storePassword project.property("ARV_KEYSTORE_PASS")
+                        keyAlias project.property("ARV_KEY_ALIAS")
+                        keyPassword project.property("ARV_KEY_PASS")
+                    }
+                }
+                signingConfig signingConfigs.releaseSigning
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = false
+            returnDefaultValues = true
+        }
+    }
+}
+
+dependencies {
+    // Each dependency justified in MOBILE-ARCHITECTURE.md §Dependency justification.
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.8.4'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303' // org.json is stubbed on the JVM; real impl for unit tests
+}

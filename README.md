@@ -1,119 +1,102 @@
 # ARV Shop Manager
 
-Complete shop management system with inventory, sales tracking, customer-facing catalog, and GitHub Pages publishing.
+Shop management system: inventory + sales for the owner, and a public
+WhatsApp-checkout product catalog for customers.
 
-## Architecture
+> **Architecture is consolidating into a single app.** The owner manager
+> (Flask) and the customer view (Node) are being merged into **one FastAPI
+> service backed by one SQLite database**. The legacy multi-server / two-DB
+> pipeline (`import.py` → `customer-view.db` → `generate.py`) is being retired.
+> See [`CLAUDE.md`](CLAUDE.md) for the governing rules and current state.
+
+## Target architecture (one brain, two faces)
 
 ```
-ARV-Shop-Manager/
-├── shop-manager/          # Flask backend + Manager UI (:8080)
-│   ├── backend/          # Flask API, SQLite DB, image processing
-│   │   ├── app.py        # Main Flask application
-│   │   ├── shop.db       # SQLite database (created on first run)
-│   │   ├── templates/    # Manager HTML UI
-│   │   └── static/       # CSS, JS, service worker
-│   └── scripts/          # Auto-backup to Google Drive
-│
-├── customer-view/        # Customer catalog + Auth + Cart
-│   ├── manager/          # View Manager UI (:3001) - publish products
-│   ├── site/             # Customer-facing site (:3000)
-│   │   ├── index.html    # Main catalog page
-│   │   ├── server.js     # Node.js server with auth/cart API
-│   │   └── sw.js         # Service worker
-│   ├── scripts/
-│   │   ├── import.py     # Sync shop-manager → customer-view DB
-│   │   └── generate.py   # Generate static site from customer-view DB
-│   ├── db/               # customer-view.db (created by import.py)
-│   └── images/           # Product images
-│
-└── git-pages/            # GitHub Pages deployment (gh-pages branch)
-    ├── public/           # Static site (copy to gh-pages branch)
-    │   ├── index.html    # Catalog page
-    │   ├── app.js        # Frontend JavaScript
-    │   ├── styles.css    # Dark theme styles
-    │   ├── sw.js         # Service worker
-    │   └── data/         # products.json, categories.json, settings.json
-    ├── server.js         # Production Node.js server
-    └── scripts/          # Catalog generation scripts
+                  ┌──────────────────────────────────────┐
+                  │   FastAPI service  (shop-manager/      │
+                  │   backend/app, /api/v1)                │
+                  │                                        │
+   Owner UI  ───► │  auth · items · sales · dashboard ·    │ ◄─── argon2id auth,
+   (admin)        │  settings   (owner-only, authed)       │      sessions
+                  │                                        │
+   Customer  ───► │  catalog · cart   (public / customer)  │ ◄─── safe fields only
+   catalog UI     │                                        │      (no cost price)
+                  └───────────────────┬────────────────────┘
+                                      │
+                              one SQLite DB (shop.db)
+                     items · daily_sales · users · sessions ·
+                          settings · user_cart
 ```
 
-## Quick Start
+Two front-end surfaces remain separate **by design**: the owner admin UI and
+the public catalog have opposite trust boundaries. The catalog must never see
+`purchase_cost`, `location`, or raw `quantity` — enforced by the `/catalog`
+routes and covered by tests.
 
-### 1. Shop Manager (Admin)
+## Quick start (consolidated backend)
 
 ```bash
 cd shop-manager/backend
-python3 app.py
-# Open http://localhost:8080 (PIN: 1234)
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+
+# Run the API
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+# OpenAPI docs: http://localhost:8080/docs
+
+# Run the tests
+python -m pytest -q
 ```
 
-### 2. Customer View (Catalog + Auth)
+Configuration is environment-driven — copy [`.env.example`](.env.example) to
+`.env`. No hardcoded host paths.
 
-```bash
-# Terminal 1: Import products from shop-manager
-cd customer-view/scripts
-python3 import.py /root/shop-manager/backend/shop.db
+## API surface (`/api/v1`)
 
-# Terminal 2: Generate static site
-python3 generate.py
+| Area | Routes | Auth |
+|------|--------|------|
+| Auth | `POST /auth/signup`, `/auth/login`, `/auth/logout`, `GET /auth/me` | public / token |
+| Items | `GET/POST /items`, `GET/PUT/DELETE /items/{id}` | owner |
+| Sales | `POST /sales`, `GET /sales` | owner |
+| Dashboard | `GET /dashboard` | owner |
+| Settings | `GET/POST /settings` | owner |
+| Catalog | `GET /catalog/products`, `/catalog/categories`, `/catalog/settings` | public |
+| Cart | `GET/POST /cart`, `DELETE /cart/{item_id}` | customer |
+| Health | `GET /health` | public |
 
-# Terminal 3: Start customer site
-cd customer-view/site
-node server.js
-# Open http://localhost:3000
-```
+All responses use the standard envelope:
+`{"success", "data", "error"}`.
 
-### 3. View Manager (Publish products)
+## Database (single DB)
 
-```bash
-cd customer-view/manager
-node server.js
-# Open http://localhost:3001
-```
+`shop-manager/backend/shop.db` (SQLite, WAL):
 
-### 4. Publish to GitHub Pages
+- `items` — inventory + merchandising flags (`visible`, `featured`, `badge`,
+  `sort_order`, `title_override`, `description_override`)
+- `daily_sales` — sales log (decremented atomically on sale)
+- `users`, `sessions` — argon2id auth + server-side sessions
+- `settings` — key/value app config (white-label ready)
+- `user_cart` — customer carts
 
-```bash
-cd customer-view/scripts
-python3 import.py /root/shop-manager/backend/shop.db
-python3 generate.py
+`stock_status` and `discount_percent` are **computed** (see
+`shop-manager/backend/domain.py`), never stored.
 
-# Copy to Cinema123BW repo (gh-pages branch)
-cd /root/Cinema123BW-Customer-Catalog
-git checkout gh-pages
-cp -r /root/customer-view/site/* public/
-git add -A && git commit -m "Update catalog"
-git push origin gh-pages
-```
+## Status of legacy components
 
-## Features
+| Component | State |
+|-----------|-------|
+| `shop-manager/backend/app.py` (Flask) | legacy; routes migrated to FastAPI, pending removal |
+| `customer-view/` (Node servers, `import.py`, `generate.py`) | being retired; backend folded into FastAPI |
+| `git-pages/` | static GitHub Pages catalog; will be generated from the one DB |
 
-- **Inventory Management**: Add, edit, delete products with images
-- **Sales Tracking**: Record sales, auto-reduce stock
-- **Stock Status**: Out-of-stock products shown with badge on catalog
-- **Google Drive Backup**: Auto-backup shop DB to Drive
-- **Customer Catalog**: Searchable product catalog with cart
-- **WhatsApp Checkout**: Customers enquire via WhatsApp
-- **Guest/Auth Users**: Device fingerprinting + optional signup
-- **Service Worker**: Offline support + hard refresh caching
-- **GitHub Pages**: Free static hosting for customer catalog
+## Tech stack
 
-## Database
+- **Backend**: Python 3.11, FastAPI, Pydantic, argon2-cffi, SQLite (WAL)
+- **Frontend**: Vanilla JS PWA (owner admin + customer catalog)
+- **Hosting**: GitHub Pages (static catalog), Google Drive (DB backup)
+- **Quality**: pytest + ruff, GitHub Actions CI (lint + test + secret scan)
 
-- `shop-manager/backend/shop.db` — Main inventory DB (items, daily_sales)
-- `customer-view/db/customer-view.db` — Customer-facing catalog (products, users, cart)
+## Engineering standards
 
-## Stock Status Logic
-
-When a product's `quantity` reaches 0 in Shop Manager:
-1. `import.py` sets `stock_status = 'out_of_stock'` in customer-view DB
-2. `generate.py` includes it in `products.json`
-3. Frontend shows "Out of Stock" badge, dims the card, hides Add to Cart/WhatsApp
-
-## Tech Stack
-
-- **Backend**: Python Flask (Shop Manager), Node.js (Customer View)
-- **Database**: SQLite (both)
-- **Frontend**: Vanilla JS, dark theme CSS
-- **Hosting**: GitHub Pages (static catalog)
-- **Storage**: Google Drive (backups)
+This repo follows the **Enterprise Coding Standards** as its single source of
+truth (Commercial Tier). See [`CLAUDE.md`](CLAUDE.md) §0.

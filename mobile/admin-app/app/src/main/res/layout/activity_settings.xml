@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        app:titleTextColor="@color/on_bg" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/screen_padding">
+
+            <EditText android:id="@+id/set_title" style="@style/FormField"
+                android:hint="@string/set_title_hint" android:inputType="text" />
+            <EditText android:id="@+id/set_subtitle" style="@style/FormField"
+                android:hint="@string/set_subtitle_hint" android:inputType="text" />
+            <EditText android:id="@+id/set_whatsapp" style="@style/FormField"
+                android:hint="@string/set_whatsapp_hint" android:inputType="phone" />
+            <EditText android:id="@+id/set_currency" style="@style/FormField"
+                android:hint="@string/set_currency_hint" android:inputType="text" />
+            <EditText android:id="@+id/set_location" style="@style/FormField"
+                android:hint="@string/set_location_hint" android:inputType="text" />
+
+            <ProgressBar android:id="@+id/set_progress"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:visibility="gone"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/set_save"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/screen_padding"
+        android:minHeight="@dimen/touch_target"
+        android:text="@string/save" />
+</LinearLayout>

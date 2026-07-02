@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+# Signing material must never be committed (GUARDRAILS 1.4)
+*.jks
+*.keystore
+keystore.properties

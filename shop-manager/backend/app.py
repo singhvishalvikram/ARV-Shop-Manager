@@ -3,11 +3,14 @@ Shop Manager - Flask Backend
 SQLite + REST API + Web Frontend + Image Processing
 """
 import os
+import json
 import sqlite3
 import base64
 import io
 from datetime import datetime
 from flask import Flask, jsonify, request, render_template, send_from_directory
+
+from domain import compute_stock_status
 
 # Try to import PIL, fallback to manual handling if not available
 try:
@@ -18,16 +21,24 @@ except ImportError:
     print("Warning: PIL not available. Images will be stored as-is without optimization.")
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-DB_PATH = os.path.join(os.path.dirname(__file__), 'shop.db')
-IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'static', 'images', 'items')
+
+# ── Config (env-overridable; no hardcoded host paths) ──────────────────
+# Defaults are repo-relative so the app runs anywhere; deployments override
+# via environment variables (see .env.example). Standards GUARDRAILS §1.4.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_SCRIPTS_DIR = os.path.join(os.path.dirname(_BASE_DIR), 'scripts')
+
+DB_PATH = os.environ.get('SHOP_DB_PATH', os.path.join(_BASE_DIR, 'shop.db'))
+IMAGES_DIR = os.environ.get('SHOP_IMAGES_DIR', os.path.join(_BASE_DIR, 'static', 'images', 'items'))
 
 # Create images directory if it doesn't exist
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
 # ========== GOOGLE DRIVE AUTO-BACKUP ==========
-AUTO_BACKUP_SCRIPT = "/root/shop-manager/scripts/auto_backup.py"
-DRIVE_CONFIG = "/root/shop-manager/backups/.drive_config.json"
-GDRIVE_FOLDER_ID = "1Weo9kErWVbTvcscEURVrG6y3syeWm-mQ"
+AUTO_BACKUP_SCRIPT = os.environ.get('AUTO_BACKUP_SCRIPT', os.path.join(_SCRIPTS_DIR, 'auto_backup.py'))
+BACKUP_DIR = os.environ.get('BACKUP_DIR', os.path.join(os.path.dirname(_BASE_DIR), 'backups'))
+DRIVE_CONFIG = os.environ.get('DRIVE_CONFIG', os.path.join(BACKUP_DIR, '.drive_config.json'))
+GDRIVE_FOLDER_ID = os.environ.get('GDRIVE_FOLDER_ID', '1Weo9kErWVbTvcscEURVrG6y3syeWm-mQ')
 
 # Load folder ID from shared config so it stays in sync with backup script
 try:
@@ -113,7 +124,7 @@ def manual_backup():
 def backup_status():
     """Check backup status and list recent backups."""
     import glob
-    backup_dir = "/root/shop-manager/backups"
+    backup_dir = BACKUP_DIR
     backups = sorted(glob.glob(os.path.join(backup_dir, "shop-manager-backup-*.json")), reverse=True)[:5]
     return jsonify({
         'ok': True,
@@ -236,9 +247,9 @@ def get_items():
         ).fetchall()
 
     items = [dict(row) for row in rows]
-    # Add computed stock_status field
+    # Add computed stock_status field (shared rule — see domain.py)
     for item in items:
-        item['stock_status'] = 'out_of_stock' if item.get('quantity', 0) <= 0 else 'in_stock'
+        item['stock_status'] = compute_stock_status(item.get('quantity'))
 
     return jsonify({'items': items})
 
@@ -250,7 +261,7 @@ def get_item(item_id):
     if row is None:
         return jsonify({'error': 'Item not found'}), 404
     item = dict(row)
-    item['stock_status'] = 'out_of_stock' if item.get('quantity', 0) <= 0 else 'in_stock'
+    item['stock_status'] = compute_stock_status(item.get('quantity'))
     return jsonify(item)
 
 

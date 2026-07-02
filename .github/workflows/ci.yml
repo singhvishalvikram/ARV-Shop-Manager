@@ -1,0 +1,85 @@
+# CI Gate (Standards: GUARDRAILS Module 4 "Gate 2", pipeline_ops Module 1).
+# Every PR must pass lint + tests before merge. Keep this green.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shop-manager/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests (pytest)
+        run: python -m pytest -q
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (detect committed secrets)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-scan:
+    # Advisory scan of Python deps for known vulnerabilities (GUARDRAILS DevSecOps).
+    # Informational so an upstream advisory doesn't block unrelated work; review
+    # findings and pin/upgrade as needed.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shop-manager/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip install -r requirements.txt
+          pip-audit
+
+  white-label-gate:
+    # Branding is config-driven (ADR-002). Fail if a tenant brand is hardcoded
+    # into customer/owner-facing front-end assets.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No hardcoded brand in front-end source
+        run: |
+          # Scope to source/markup (html/js/css/manifest). Runtime data under
+          # */data/ legitimately holds a shop's chosen name (white-label working),
+          # so it is excluded.
+          if grep -rniI "ARV" \
+              shop-manager/backend/static shop-manager/backend/templates \
+              customer-view/site git-pages 2>/dev/null \
+              | grep -viE "node_modules|/\.venv/|/data/|/icons/"; then
+            echo "::error::Hardcoded 'ARV' brand found in front-end source — brand from settings instead."
+            exit 1
+          fi
+          echo "OK: no hardcoded brand in front-end source."
