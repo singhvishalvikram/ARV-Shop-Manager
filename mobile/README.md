@@ -8,11 +8,15 @@ V01 platform. Everything talks to (or is served by) the one FastAPI backend at
 
 | App / surface | Path | Who | Talks to |
 |---|---|---|---|
-| **Admin app** (Android, Java) | [`admin-app/`](admin-app/) | Shop owner | `/api/v1` (authenticated: items, sales, dashboard, settings) |
-| **Customer app** (Android, Java) | [`customer-app/`](customer-app/) | Customer | Static catalog JSON (GitHub Pages) + WhatsApp |
+| **Backend** (FastAPI, `/api/v1`) | [`../shop-manager/backend/`](../shop-manager/backend/) | — | SQLite; argon2id auth; serves the PWA + live catalog |
+| **Admin app** (Android, Java) | [`admin-app/`](admin-app/) | Shop owner | the backend (authenticated: items, sales, dashboard, settings) |
+| **Customer app** (Android, Java) | [`customer-app/`](customer-app/) | Customer | Static catalog JSON (GitHub Pages) + WhatsApp — **no backend needed** |
 | **Customer PWA** | [`../git-pages/`](../git-pages/) | Customer (web) | Served live by the backend (`StaticFiles`) / GitHub Pages |
 
-The **backend** already serves the customer PWA and a live catalog API
+**The backend is required for the admin/owner experience** (accounts, inventory, sales,
+dashboard). It lives in this same repo at `../shop-manager/backend/` and is deployed once
+behind HTTPS — see [`DEPLOYMENT.md`](DEPLOYMENT.md). The customer app is standalone and
+needs no backend. The backend also serves the PWA and a live catalog API
 (`/api/v1/catalog/*`), so the customer app can later point at the live API instead of
 static JSON with no redesign.
 
@@ -20,6 +24,9 @@ static JSON with no redesign.
 
 | Doc | What it covers |
 |---|---|
+| [`DEVICE-INSTALL.md`](DEVICE-INSTALL.md) | **Will the APK run on my phone?** Android versions, sideloading, why the admin app needs a backend URL |
+| [`DEPLOYMENT.md`](DEPLOYMENT.md) | **Deploy the backend + build/ship APKs** that run on any phone; release signing & Play path |
+| [`NEXT-STEPS.md`](NEXT-STEPS.md) | Short, prioritized "what to do next" sequence (the roadmap distilled) |
 | [`ADMIN-APP-BLUEPRINT.md`](ADMIN-APP-BLUEPRINT.md) | Admin app: Discovery→PRD→RFC→20-phase plan, verified API contract |
 | [`MIGRATION-VERIFICATION.md`](MIGRATION-VERIFICATION.md) | Web→mobile parity matrix + live test evidence (owner + customer) |
 | [`PRODUCT-ROADMAP.md`](PRODUCT-ROADMAP.md) | Path to sellable: multi-tenancy, billing, features, **security roadmap** |
